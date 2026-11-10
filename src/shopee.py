@@ -344,6 +344,29 @@ def matches_region(item: dict, region_filter: str) -> bool:
     return any(part.replace("臺", "台") in location for part in parts)
 
 
+def explain_filters(
+    items: list[dict], *, free_shipping: bool = False, region_filter: str = ""
+) -> str:
+    """說明各篩選條件各會排除幾件商品，並列出實際的出貨地，方便判斷條件是否設太嚴。"""
+    if not items:
+        return ""
+    lines = []
+    if free_shipping:
+        kept = sum(1 for i in items if "免運" in (i.get("商品標籤") or []))
+        lines.append(f"免運篩選：{len(items)} 件中有 {kept} 件帶有免運標記")
+    if region_filter:
+        kept = sum(1 for i in items if matches_region(i, region_filter))
+        locations: dict[str, int] = {}
+        for item in items:
+            name = str(item.get("出貨地區") or "未知")
+            locations[name] = locations.get(name, 0) + 1
+        top = "、".join(f"{k}×{v}" for k, v in sorted(locations.items(), key=lambda kv: -kv[1])[:8])
+        lines.append(
+            f"區域篩選「{region_filter}」：{len(items)} 件中有 {kept} 件符合；實際出貨地: {top}"
+        )
+    return "\n".join(lines)
+
+
 def filter_search_items(
     items: list[dict], *, free_shipping: bool = False, region_filter: str = ""
 ) -> list[dict]:

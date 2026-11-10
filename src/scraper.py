@@ -26,6 +26,7 @@ from src.config import (
 )
 from src.shopee import (
     build_search_url,
+    explain_filters,
     filter_search_items,
     is_detail_response,
     is_login_url,
@@ -666,6 +667,15 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                         f"第 {page_num} 頁解析到 {len(raw_items)} 件商品，"
                         f"篩選後剩 {len(basic_items)} 件。"
                     )
+                    if not basic_items:
+                        print(
+                            explain_filters(
+                                raw_items,
+                                free_shipping=bool(free_shipping),
+                                region_filter=region_filter,
+                            )
+                            or "沒有設定免運或區域篩選，但商品仍被排除，請回報此日誌。"
+                        )
                     historical_snapshots.extend(
                         record_market_snapshots(
                             keyword=keyword,
