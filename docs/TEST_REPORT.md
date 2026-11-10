@@ -4,19 +4,19 @@
 
 ## 本次整體結果
 
-程式版本：`52f4280`（移除舊平台程式後的版本；本次另更新文件與授權檔打包設定）。測試日期：2026-11-10。
+測試日期：2026-11-10。完整預覽版首次發布為 `a4abe63`；本次修正 Windows 備份檔案鎖、跨平台測試、明確 .env 路徑並更新套件，後續 CI 結果以 PR #1 的檢查為準。
 
 | 命令／項目 | 實際結果 | 說明 |
 |---|---|---|
 | `.venv/bin/python -m pytest -q` | **179 passed** | 僅計新蝦皮流程及仍適用的保留測試，不含已移除的舊平台測試 |
 | `cd web-ui` 後 `npm test` | **7 passed** | 前端純邏輯測試，不等於瀏覽器互動驗證 |
 | `cd web-ui` 後 `npm run build` | **通過** | `vue-tsc -b` 與 Vite 正式建置成功，輸出至根目錄 `dist/` |
-| Chromium 瀏覽器操作與截圖 | **未執行成功** | Chromium 因執行環境 socket 權限限制無法啟動；未進行 UI 點擊／操作，未產生驗收截圖 |
-| Windows 11 完整啟動 | **待驗證** | 目前優先交付 ZIP 供 Windows 本機測試，未以 Linux 結果代替 Windows 驗收 |
-| Docker 建置／執行 | **未執行** | 環境沒有 Docker；依使用者優先順序後續再驗收 |
-| GitHub Actions | **待執行／查核** | 已有工作流程，尚不宣稱遠端 CI 通過 |
+| Chrome 瀏覽器操作 | **Windows 通過** | 真實 Chrome 執行登入、建立／修改／刪除、取消／Escape、商品／歷史、匯入、設定／Prompt、返回、手機版與登出／再登入。測試使用隔離資料；首次測試需關閉隱含 .env 搜尋，本次已修正為明確本目錄路徑 |
+| Windows 11 ZIP 啟動 | **通過** | PowerShell 5.1、PATH Python 3.14.7、Node 24.13.0：建立 venv、安裝、前端建置、Uvicorn 啟動、健康檢查成功；-CheckOnly 於 PS5.1 與 PS7 通過 |
+| Docker 建置／執行 | **GitHub CI 通過** | 初版 CI 已建置並通過容器健康與登入保護檢查；本機沒有 Docker。Compose 磁碟區還原尚未驗證 |
+| GitHub Actions | **修正後重跑中** | 初版 Linux／Docker 通過；Windows 5 項失敗已定位並修正，詳見下方。未以警告誤當根因 |
 
-前端建置出現 Browserslist 資料過期及 npm 環境設定警告，但命令成功結束。套件更新須另行測試，沒有為消除提示而盲目升級。
+依實際 npm audit 修補既有版本範圍內的依賴，未使用 --force 或主要版本升級。重新 npm ci、npm audit、前端測試及建置全部通過；audit 由 12 項（9 高、3 中）降為 0。這不代表所有未知風險均不存在。
 
 ## 部署工具：已執行
 
@@ -38,7 +38,7 @@ SQLite 備份測試包含尚未 checkpoint 的已提交 WAL 資料、完整性�
 
 ## 整合驗證狀態
 
-使用者後續指定移除所有舊平台程式；清理前的較大測試總數不作為最後版本的驗收結果。本次已重跑清理後的 179 項 Python 測試、7 項前端邏輯測試及 Vue 建置，全部通過。瀏覽器操作與 Windows 實機啟動仍分開列為未驗證。
+使用者後續指定移除所有舊平台程式；清理前的較大測試總數不作為最後版本的驗收結果。本次已重跑清理後的 179 項 Python 測試、7 項前端邏輯測試及 Vue 建置，全部通過。Windows ZIP 啟動與 Chrome 操作另有實機驗證，沒有用 Linux 結果代替。
 
 新增自動化包含 Linux／Windows Python 與 Vue 建置，以及 Docker 建置、健康檢查與未登入 API 的 401 檢查。工作流程位於 `.github/workflows/shopee-tests.yml`；工作流程存在不代表已在 GitHub 上執行成功。
 
@@ -56,9 +56,9 @@ SQLite 備份測試包含尚未 checkpoint 的已提交 WAL 資料、完整性�
 
 ## 尚未驗證／外部阻礙
 
-- Windows 11 PowerShell 完整實機啟動：尚待測試；已完成的腳本靜態檢查不等於 Windows 驗收。
-- 真實瀏覽器 UI 操作：本次 Chromium 未能啟動，因此沒有點擊測試或截圖證據。前端邏輯測試與建置通過不能替代此項。
-- Docker 映像建置、Compose 啟動與磁碟區還原：目前執行環境沒有 `docker`，未執行本機建置。使用者已指定不急，保留設定與 CI 供後續驗收。
+- Windows 完整回歸：等待修正後 CI 與最新快照重跑；ZIP 啟動、HTTP 操作及 Chrome 操作已通過。
+- 雲端 Chromium 因 socket 系統限制無法啟動，已改在 Windows 的真實 Chrome 完成操作驗證。
+- Docker 本機／Compose 磁碟區還原：未驗證。本次 GitHub CI 映像建置與容器測試通過不代表已驗證實機 Compose 還原。
 - 正式蝦皮搜尋、OAuth／Access Token、配額與服務條款：等待合法資料來源與授權。
 - 真實 AI 供應商呼叫與圖片理解：尚無指定測試端點／金鑰，本地相容測試不代表正式端點驗證。
 - 真實 Discord 收訊：尚無指定測試 Webhook／頻道，模擬 HTTP 測試不代表已送達 Discord。
@@ -66,3 +66,9 @@ SQLite 備份測試包含尚未 checkpoint 的已提交 WAL 資料、完整性�
 ## 上線驗收
 
 只有來源授權、真實商品搜尋、AI 有效 JSON、排程穩定性、Discord 收訊、Windows 11 啟動及主要測試全部完成，才能宣告正式完成。現階段應標示為可測試預覽版。
+
+## Windows 首次 CI 的發現與修正
+
+初次結果為 168 passed、5 failed、6 skipped。真正問題是 SQLite 備份使用連線 context manager 卻未 close，失敗清理在 Windows 遭檔案鎖阻擋；已改用 contextlib.closing。另兩項讀檔測試未指定 UTF-8、兩項代理測試假設環境變數名稱區分大小寫，已依跨平台語意修正。Node 20 淘汰提醒不是失敗原因。
+
+Windows 本機 HTTP 實測：Cookie 登入、任務 CRUD、兩次執行去重、NT$20,000 模擬歷史、授權確認匯入、NT$17,000→16,000 價格歷史、刪除保留歷史、舊路由 404、登出後 API 401 均通過。

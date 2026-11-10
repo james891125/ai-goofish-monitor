@@ -54,7 +54,7 @@ def test_backup_never_overwrites_existing_file(tmp_path):
     destination.write_text('must survive')
     with pytest.raises(FileExistsError):
         backup_database(source, destination)
-    assert destination.read_text() == 'must survive'
+    assert destination.read_text(encoding='utf-8') == 'must survive'
 
 
 def test_backup_failure_removes_only_new_incomplete_backup(tmp_path):
@@ -62,12 +62,12 @@ def test_backup_failure_removes_only_new_incomplete_backup(tmp_path):
     source.write_text('not a database')
     with pytest.raises(sqlite3.DatabaseError):
         backup_database(source, destination)
-    assert source.read_text() == 'not a database'
+    assert source.read_text(encoding='utf-8') == 'not a database'
     assert not destination.exists()
 
 
 def test_compose_builds_local_fork_and_binds_localhost():
-    compose = (ROOT / 'docker-compose.yaml').read_text()
+    compose = (ROOT / 'docker-compose.yaml').read_text(encoding='utf-8')
     assert 'context: .' in compose
     assert 'dockerfile: Dockerfile' in compose
     assert '127.0.0.1:${SERVER_PORT:-8000}:8000' in compose
@@ -77,15 +77,15 @@ def test_compose_builds_local_fork_and_binds_localhost():
 
 
 def test_docker_context_excludes_local_secrets():
-    patterns = set((ROOT / '.dockerignore').read_text().splitlines())
+    patterns = set((ROOT / '.dockerignore').read_text(encoding='utf-8').splitlines())
     for expected in ('.env', '.env.*', '**/*state*.json', '**/*cookie*', 'state', 'data', 'backups', '**/*.key', '**/*.pem'):
         assert expected in patterns
-    dockerfile = (ROOT / 'Dockerfile').read_text()
+    dockerfile = (ROOT / 'Dockerfile').read_text(encoding='utf-8')
     assert 'USER app' in dockerfile
     assert 'COPY . ' not in dockerfile
     assert 'spider_v2.py' not in dockerfile
     assert 'playwright install' not in dockerfile
-    assert 'usagi-org' not in (ROOT / 'Dockerfile.release').read_text()
+    assert 'usagi-org' not in (ROOT / 'Dockerfile.release').read_text(encoding='utf-8')
 
 
 def test_windows_launcher_uses_venv_without_policy_changes():
@@ -102,7 +102,7 @@ def test_windows_launcher_uses_venv_without_policy_changes():
 
 def test_environment_example_contains_no_default_secret():
     entries = {}
-    for line in (ROOT / '.env.example').read_text().splitlines():
+    for line in (ROOT / '.env.example').read_text(encoding='utf-8').splitlines():
         if line and not line.startswith('#') and '=' in line:
             key, value = line.split('=', 1)
             entries[key] = value
@@ -148,4 +148,4 @@ def test_bash_check_only_without_starting_server(tmp_path, scenario):
 
 
 def test_release_dockerfile_does_not_drift_from_local_build():
-    assert (ROOT / 'Dockerfile.release').read_text() == (ROOT / 'Dockerfile').read_text()
+    assert (ROOT / 'Dockerfile.release').read_text(encoding='utf-8') == (ROOT / 'Dockerfile').read_text(encoding='utf-8')

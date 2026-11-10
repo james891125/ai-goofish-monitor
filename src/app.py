@@ -15,7 +15,7 @@ from src.api.routes import prompts, shopee
 from src.infrastructure.persistence.shopee_repository import ShopeeRepository
 from src.services.shopee_runtime import ShopeeRuntime
 
-load_dotenv(override=True,interpolate=False)
+load_dotenv(dotenv_path='.env',override=True,interpolate=False)
 SESSIONS: dict[str,float]={}
 LOGIN_ATTEMPTS: dict[str,list[float]]={}
 SESSION_TTL=8*60*60

@@ -12,7 +12,7 @@ async def main():
     parser.add_argument('--task-name',help='執行已儲存的指定任務')
     parser.add_argument('--debug-limit',type=int,default=0,help='限制每次處理筆數')
     args=parser.parse_args()
-    load_dotenv(interpolate=False)
+    load_dotenv(dotenv_path='.env',interpolate=False)
     repository=ShopeeRepository()
     tasks=[task for task in repository.tasks() if task.enabled and (not args.task_name or task.task_name==args.task_name)]
     if not tasks: parser.error('沒有符合條件的蝦皮任務，請先透過網頁建立。')

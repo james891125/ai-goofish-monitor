@@ -35,7 +35,7 @@ def test_atomic_replace_failure_keeps_settings(tmp_path,monkeypatch):
     def fail(*args): raise OSError('test failure')
     monkeypatch.setattr(os,'replace',fail)
     assert not EnvManager(str(path)).update_values({'OPENAI_MODEL_NAME':'new'})
-    assert path.read_text()=='WEB_USERNAME=test\n'
+    assert path.read_text(encoding='utf-8')=='WEB_USERNAME=test\n'
     assert list(tmp_path.iterdir())==[path]
 
 
@@ -46,7 +46,7 @@ def test_persistent_settings_symlink_is_preserved(tmp_path):
     try: link.symlink_to(target)
     except OSError: pytest.skip('OS does not permit creating test symlinks')
     assert EnvManager(str(link)).update_values({'OPENAI_MODEL_NAME':'new'})
-    assert link.is_symlink() and 'OPENAI_MODEL_NAME=new' in target.read_text()
+    assert link.is_symlink() and 'OPENAI_MODEL_NAME=new' in target.read_text(encoding='utf-8')
 
 
 def test_literal_dollar_syntax_round_trips_without_interpolation(tmp_path):

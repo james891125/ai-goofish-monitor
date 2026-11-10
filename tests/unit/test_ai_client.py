@@ -262,7 +262,8 @@ def test_sanitize_no_proxy_handles_both_keys(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "::1/128")
     monkeypatch.setenv("no_proxy", "fe80::1/10")
     _sanitize_no_proxy_env()
-    assert os.environ["NO_PROXY"] == "::1"
+    # Windows aliases environment variable names case-insensitively.
+    assert os.environ["NO_PROXY"] == ("fe80::1" if os.name == "nt" else "::1")
     assert os.environ["no_proxy"] == "fe80::1"
 
 
@@ -270,8 +271,9 @@ def test_sanitize_no_proxy_unwraps_bracketed_ipv6(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1,::1,[::1]")
     monkeypatch.setenv("no_proxy", "[::1/128],10.0.0.0/8,[not-ipv6]")
     _sanitize_no_proxy_env()
-    assert os.environ["NO_PROXY"] == "localhost,127.0.0.1,::1,::1"
-    assert os.environ["no_proxy"] == "::1,10.0.0.0/8,[not-ipv6]"
+    lower_expected = "::1,10.0.0.0/8,[not-ipv6]"
+    assert os.environ["NO_PROXY"] == (lower_expected if os.name == "nt" else "localhost,127.0.0.1,::1,::1")
+    assert os.environ["no_proxy"] == lower_expected
 
 
 def test_bracketed_ipv6_no_proxy_does_not_break_openai_client(monkeypatch):

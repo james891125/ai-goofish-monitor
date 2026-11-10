@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,8 +19,8 @@ def backup_database(source: Path, destination: Path) -> Path:
     with destination.open("xb"):
         pass
     try:
-        with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as src:
-            with sqlite3.connect(destination) as dst:
+        with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as src:
+            with closing(sqlite3.connect(destination)) as dst:
                 src.backup(dst)
                 if dst.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                     raise RuntimeError("備份完整性檢查失敗。")

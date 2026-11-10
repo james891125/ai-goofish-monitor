@@ -42,7 +42,7 @@
 | 套件 | 已檢查版本 | 套件 metadata 授權 |
 |---|---|---|
 | `lucide-vue-next` | 0.562.0 | ISC；LICENSE 另保留源自 Feather 部分的 MIT 聲明 |
-| `vue` | 3.5.26 | MIT |
+| `vue` | 3.5.45 | MIT |
 | `vue-router` | 4.6.4 | MIT |
 
 ## 前端建置／型別檢查依賴
@@ -53,10 +53,10 @@
 | `@vitejs/plugin-vue` | 6.0.3 | MIT |
 | `@vue/tsconfig` | 0.8.1 | MIT |
 | `autoprefixer` | 10.4.23 | MIT |
-| `postcss` | 8.5.6 | MIT |
+| `postcss` | 8.5.32 | MIT |
 | `tailwindcss` | 3.4.17 | MIT |
 | `typescript` | 5.9.3 | Apache-2.0 |
-| `vite` | 7.3.0 | MIT |
+| `vite` | 7.3.8 | MIT |
 | `vue-tsc` | 3.2.1 | MIT |
 
 ## 散布前仍須檢查
