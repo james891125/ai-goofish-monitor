@@ -73,6 +73,8 @@ EDGE_DOCKER_WARNING_PRINTED = False
 
 SEARCH_RESPONSE_TIMEOUT_MS = 30_000
 DETAIL_RESPONSE_TIMEOUT_MS = 25_000
+# 視窗可見時，遇到蝦皮驗證最多等使用者幾秒（0 表示不等待）
+MANUAL_VERIFY_TIMEOUT_SECONDS = max(0, int(os.getenv("MANUAL_VERIFY_TIMEOUT_SECONDS", "300") or 0))
 
 
 def _resolve_browser_channel() -> str:
@@ -382,7 +384,7 @@ def _raise_if_blocked(url: str) -> None:
         raise RiskControlError(f"蝦皮要求人機驗證: {url}")
 
 
-async def _load_search_page(page, search_url: str) -> dict:
+async def _fetch_search_payload(page, search_url: str) -> dict:
     """開啟搜尋頁，並攔截頁面自己發出的 search_items API 回應。"""
     try:
         async with page.expect_response(
@@ -400,6 +402,48 @@ async def _load_search_page(page, search_url: str) -> dict:
     if is_risk_blocked_payload(payload):
         raise RiskControlError(f"蝦皮搜尋 API 被風控攔截 (error={payload.get('error')})")
     return payload
+
+
+async def _wait_for_manual_verification(page, timeout_seconds: int) -> bool:
+    """瀏覽器視窗可見時，讓使用者自己完成蝦皮的驗證；完成後頁面會重新拿到正常的搜尋結果。"""
+    print(
+        "\n==================== 需要手動驗證 ====================\n"
+        "蝦皮要求驗證。請在剛開啟的瀏覽器視窗中完成驗證（必要時重新登入），\n"
+        f"完成後回到搜尋結果頁即可。最多等待 {timeout_seconds} 秒。\n"
+        "======================================================"
+    )
+    deadline = asyncio.get_running_loop().time() + timeout_seconds
+    while True:
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            return False
+        try:
+            response = await page.wait_for_event(
+                "response",
+                predicate=is_search_response,
+                timeout=remaining * 1000,
+            )
+        except PlaywrightTimeoutError:
+            return False
+        try:
+            payload = await response.json()
+        except Exception:
+            continue
+        if response.ok and not is_risk_blocked_payload(payload):
+            log_time("偵測到驗證已完成，繼續執行。")
+            return True
+
+
+async def _load_search_page(page, search_url: str) -> dict:
+    try:
+        return await _fetch_search_payload(page, search_url)
+    except RiskControlError:
+        if RUN_HEADLESS or MANUAL_VERIFY_TIMEOUT_SECONDS <= 0:
+            print("提示：在 .env 設定 RUN_HEADLESS=false 後，遇到驗證時可以手動完成再繼續。")
+            raise
+        if not await _wait_for_manual_verification(page, MANUAL_VERIFY_TIMEOUT_SECONDS):
+            raise
+        return await _fetch_search_payload(page, search_url)
 
 
 async def _load_item_detail(context, item_url: str) -> Optional[dict]:

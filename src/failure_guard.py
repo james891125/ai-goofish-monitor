@@ -88,23 +88,43 @@ def _cookie_changed(
 
 
 class _FileLock:
+    """跨行程的互斥鎖。鎖在獨立的 .lock 檔上，資料檔本身才能在 Windows 上被原子替換。"""
+
     def __init__(self, fh):
         self._fh = fh
 
     def __enter__(self):
-        try:
-            import fcntl
+        if os.name == "nt":
+            import msvcrt
 
-            fcntl.flock(self._fh.fileno(), fcntl.LOCK_EX)
-        except Exception:
-            pass
+            # 等待其他行程釋放（msvcrt.LK_LOCK 每秒重試，最多 10 次）
+            while True:
+                try:
+                    self._fh.seek(0)
+                    msvcrt.locking(self._fh.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:
+                    time.sleep(0.1)
+        else:
+            try:
+                import fcntl
+
+                fcntl.flock(self._fh.fileno(), fcntl.LOCK_EX)
+            except Exception:
+                pass
         return self
 
     def __exit__(self, exc_type, exc, tb):
         try:
-            import fcntl
+            if os.name == "nt":
+                import msvcrt
 
-            fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
+                self._fh.seek(0)
+                msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
         except Exception:
             pass
         return False
@@ -140,7 +160,15 @@ def _atomic_write_json(path: str, data: dict) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2, sort_keys=True)
         f.flush()
         os.fsync(f.fileno())
-    os.replace(tmp, path)
+    # Windows 上防毒軟體或其他程式短暫開啟檔案時，os.replace 會回報存取被拒，稍後重試即可
+    for attempt in range(10):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt == 9:
+                raise
+            time.sleep(0.2)
 
 
 @dataclass(frozen=True)
@@ -188,9 +216,8 @@ class FailureGuard:
 
     def _update_task(self, task_key: str, updater) -> dict:
         _ensure_parent_dir(self.path)
-        with open(self.path, "a+", encoding="utf-8") as fh:
+        with open(f"{self.path}.lock", "a+", encoding="utf-8") as fh:
             with _FileLock(fh):
-                fh.seek(0)
                 data = self._load()
                 tasks = data.setdefault("tasks", {})
                 entry = tasks.get(task_key) or {}
