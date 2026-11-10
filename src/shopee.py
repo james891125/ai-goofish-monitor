@@ -177,6 +177,44 @@ def _flatten_item_card(entry: dict) -> dict:
     return flat
 
 
+def _basic_from_asset_layout(entry: dict) -> dict:
+    """蝦皮目前的搜尋結果：顯示資料在 item_card_displayed_asset，統計資料在 item_data。
+
+    轉成舊版 item_basic 的欄位名稱，後面的解析就不用分兩套。
+    """
+    asset = entry.get("item_card_displayed_asset")
+    data = entry.get("item_data")
+    if not isinstance(asset, dict) or not isinstance(data, dict):
+        return {}
+    price_info = data.get("item_card_display_price") or asset.get("display_price") or {}
+    sold_info = data.get("item_card_display_sold_count") or {}
+    labels = json.dumps(
+        [asset.get("promotion_label_list"), asset.get("image_overlay"), asset.get("free_badge")],
+        ensure_ascii=False,
+    )
+    return {
+        "itemid": data.get("itemid") or entry.get("itemid"),
+        "shopid": data.get("shopid") or entry.get("shopid"),
+        "name": asset.get("name"),
+        "image": asset.get("image"),
+        "images": asset.get("images"),
+        "shop_location": asset.get("shop_location"),
+        "shop_name": (data.get("shop_data") or {}).get("shop_name"),
+        "price": price_info.get("price"),
+        "price_before_discount": price_info.get("strikethrough_price")
+        or price_info.get("original_price"),
+        "discount": (asset.get("discount_tag") or {}).get("discount_text"),
+        "historical_sold": sold_info.get("historical_sold_count"),
+        "liked_count": data.get("liked_count"),
+        "ctime": data.get("ctime"),
+        "item_rating": data.get("item_rating"),
+        "shopee_verified": data.get("shopee_verified"),
+        "is_adult": data.get("is_adult"),
+        "is_sold_out": bool(data.get("is_sold_out")),
+        "show_free_shipping": "免運" in labels,
+    }
+
+
 def describe_search_entry(payload: Any) -> str:
     """回傳第一筆搜尋結果的欄位結構（不含內容），解析不到標題時用來除錯。"""
     items = payload.get("items") if isinstance(payload, dict) else None
@@ -199,7 +237,12 @@ def parse_search_items(payload: Any) -> list[dict]:
     for entry in payload.get("items") or []:
         if not isinstance(entry, dict):
             continue
-        basic = entry.get("item_basic") or _flatten_item_card(entry) or entry
+        basic = (
+            entry.get("item_basic")
+            or _basic_from_asset_layout(entry)
+            or _flatten_item_card(entry)
+            or entry
+        )
         item_id = basic.get("itemid") or entry.get("itemid")
         shop_id = basic.get("shopid") or entry.get("shopid")
         if not item_id or not shop_id:
@@ -223,7 +266,8 @@ def parse_search_items(payload: Any) -> list[dict]:
                 "商品原價": format_price(before_discount) if before_discount else "暫無",
                 "“想要”人數": basic.get("liked_count", 0),
                 "已售數量": basic.get("historical_sold", basic.get("sold", 0)),
-                "庫存": basic.get("stock", "未知"),
+                "庫存": 0 if basic.get("is_sold_out") else basic.get("stock", "未知"),
+                "已售完": bool(basic.get("is_sold_out")),
                 "商品評分": round(float(rating.get("rating_star") or 0), 2),
                 "評價數量": rating_counts[0] if rating_counts else 0,
                 "商品標籤": _build_tags(basic),
@@ -295,13 +339,12 @@ def parse_item_detail(payload: Any) -> dict:
         detail["商品圖片列表"] = images
         detail["商品主圖連結"] = images[0]
 
-    single_price = _first(price_block.get("single_value"), item.get("price"))
+    # 多規格商品常常只有價格區間、沒有單一價格，兩種都要處理
+    range_min = _first(price_block.get("range_min"), item.get("price_min"))
+    range_max = _first(price_block.get("range_max"), item.get("price_max"))
+    single_price = _first(price_block.get("single_value"), item.get("price"), range_min)
     if isinstance(single_price, (int, float)) and single_price > 0:
-        detail["目前售價"] = _format_price_range(
-            _first(price_block.get("range_min"), item.get("price_min")),
-            _first(price_block.get("range_max"), item.get("price_max")),
-            single_price,
-        )
+        detail["目前售價"] = _format_price_range(range_min, range_max, single_price)
 
     sold = _first(review.get("historical_sold"), item.get("historical_sold"))
     if sold is not None:

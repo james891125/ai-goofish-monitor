@@ -32,8 +32,8 @@ def build_analysis_text_prompt(
     value_note = (
         "\n如果商品 JSON 中包含“價格參考”或 price_insight，請結合價格位置、歷史走勢、"
         "配置、成色、附件、賣家資訊綜合判斷價效比。"
-        "你可以額外輸出可選欄位 value_score(0-100) 和 value_summary，"
-        "但必須保留原有 is_recommended/reason 等欄位。\n"
+        "value_score(0-100，符合我需求的程度)必須輸出，並與 is_recommended 一致；"
+        "reason 請用一句話說明主要依據。\n"
     )
     return f"""請基於你的專業知識和我的要求，分析以下完整的商品JSON資料：
 

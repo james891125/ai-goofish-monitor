@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Awaitable, Callable, Optional
 
 from src.config import AI_MAX_IMAGES
+from src.services.recommendation_rules import apply_score_threshold, precheck_reject
 from src.keyword_rule_engine import build_search_text, evaluate_keyword_rules
 
 
@@ -92,6 +93,9 @@ class ItemAnalysisDispatcher:
     async def _build_analysis_result(self, job: ItemAnalysisJob, record: dict) -> dict:
         if job.decision_mode == "keyword":
             return self._build_keyword_result(job, record)
+        rejected = precheck_reject(record)
+        if rejected:
+            return rejected
         if self._skip_ai_analysis:
             return self._build_skip_ai_result()
         return await self._run_ai_analysis(job, record)
@@ -133,7 +137,7 @@ class ItemAnalysisDispatcher:
                 )
             ai_result.setdefault("analysis_source", "ai")
             ai_result.setdefault("keyword_hit_count", 0)
-            return ai_result
+            return apply_score_threshold(ai_result)
         except Exception as exc:
             return self._build_ai_error_result(
                 f"AI分析異常: {exc}",

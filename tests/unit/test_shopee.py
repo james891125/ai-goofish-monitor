@@ -161,3 +161,56 @@ def test_title_matches_keyword_ignores_spaces_and_order_but_keeps_model_digits()
     # 解析不到標題時不排除
     assert shopee.title_matches_keyword("未知標題", kw)
     assert shopee.title_matches_keyword("任何商品", "")
+
+
+def test_parse_search_items_supports_current_asset_layout():
+    payload = {
+        "items": [
+            {
+                "item_basic": None,
+                "itemid": 7,
+                "shopid": 8,
+                "item_card_displayed_asset": {
+                    "name": "Apple Mac mini M4 16G/256G",
+                    "image": "tw-img",
+                    "images": ["tw-img", "tw-img2"],
+                    "shop_location": "高雄市",
+                    "display_price": {"price": 2290000000, "strikethrough_price": 2490000000},
+                    "discount_tag": {"discount_text": "8%"},
+                    "promotion_label_list": [{"text": "滿額免運"}],
+                },
+                "item_data": {
+                    "itemid": 7,
+                    "shopid": 8,
+                    "item_card_display_price": {"price": 2290000000, "strikethrough_price": 2490000000},
+                    "item_card_display_sold_count": {"historical_sold_count": 15},
+                    "liked_count": 30,
+                    "ctime": 1700000000,
+                    "is_sold_out": False,
+                    "shop_data": {"shop_name": "某某3C"},
+                    "item_rating": {"rating_star": 4.9, "rating_count": [20, 0, 0, 0, 1, 19]},
+                    "shopee_verified": True,
+                },
+            }
+        ]
+    }
+
+    item = shopee.parse_search_items(payload)[0]
+
+    assert item["商品標題"] == "Apple Mac mini M4 16G/256G"
+    assert item["目前售價"] == "$22,900" and item["商品原價"] == "$24,900"
+    assert item["出貨地區"] == "高雄市" and item["賣家暱稱"] == "某某3C"
+    assert item["已售數量"] == 15 and item["評價數量"] == 20
+    assert "免運" in item["商品標籤"] and item["已售完"] is False
+    assert len(item["商品圖片列表"]) == 2
+
+
+def test_detail_price_uses_range_when_variations_have_no_single_price():
+    payload = {
+        "data": {
+            "item": {"title": "多規格"},
+            "product_price": {"price": {"range_min": 1000000000, "range_max": 2000000000}},
+        }
+    }
+
+    assert shopee.parse_item_detail(payload)["目前售價"] == "$10,000 - $20,000"
