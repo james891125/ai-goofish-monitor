@@ -96,6 +96,7 @@ try {
                 & $Python @PythonArgs $Helper @ProbeArgs
                 if ($LASTEXITCODE -ne 3) { throw '安裝選用依賴前，請先停止此連接埠的既有服務；不會修改執行中的環境。' }
                 Write-Host '此功能是選用實驗，不會自動登入、避開驗證或安裝瀏覽器。請先準備 browser-request.json。'
+                Write-Host '選用依賴清單：requirements-browser.txt。只有輸入 yes 才會安裝。'
                 $Answer = Read-Host '是否在本專案安裝 requirements-browser.txt 的選用依賴？輸入 yes 才會安裝'
                 if ($Answer.Trim().ToLowerInvariant() -ne 'yes') { Write-Host '已取消，未安裝依賴，未開啟瀏覽器。'; return }
                 if (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) {
