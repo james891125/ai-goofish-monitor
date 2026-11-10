@@ -174,7 +174,12 @@ async def export_result_file_content(
 
     export_name = filename.replace(".jsonl", ".csv")
     headers = _build_download_headers(export_name)
-    return Response(content=csv_text, media_type="text/csv; charset=utf-8", headers=headers)
+    # 加上 UTF-8 BOM：Excel 開啟沒有 BOM 的 UTF-8 檔會當成 Big5，中文全部變亂碼
+    return Response(
+        content="\ufeff" + csv_text,
+        media_type="text/csv; charset=utf-8",
+        headers=headers,
+    )
 
 
 class ItemStatus(str, Enum):

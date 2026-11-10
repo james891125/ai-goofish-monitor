@@ -196,6 +196,8 @@ def test_results_insights_and_export_csv(tmp_path, monkeypatch):
     text = export_resp.text
     assert "任務名稱,搜尋關鍵字,商品ID,商品標題" in text
     assert "Demo One" in text
+    # Excel 需要 BOM 才會把檔案當成 UTF-8，否則中文會變亂碼
+    assert export_resp.content.startswith(b"\xef\xbb\xbf")
 
 
 def test_results_export_csv_supports_unicode_filename(tmp_path, monkeypatch):
