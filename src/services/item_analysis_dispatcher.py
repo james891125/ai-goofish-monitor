@@ -8,6 +8,7 @@ import os
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Optional
 
+from src.config import AI_MAX_IMAGES
 from src.keyword_rule_engine import build_search_text, evaluate_keyword_rules
 
 
@@ -145,7 +146,7 @@ class ItemAnalysisDispatcher:
         if not job.analyze_images:
             return []
         item_data = record.get("商品資訊", {}) or {}
-        image_urls = item_data.get("商品圖片列表", [])
+        image_urls = (item_data.get("商品圖片列表", []) or [])[:AI_MAX_IMAGES]
         if not image_urls:
             return []
         return await self._image_downloader(

@@ -398,6 +398,27 @@ def explain_filters(
     return "\n".join(lines)
 
 
+def _normalize_for_match(text: str) -> str:
+    """轉小寫並去掉空白與符號，讓「RTX 5070 Ti」與「rtx5070ti」視為相同。"""
+    return "".join(ch for ch in str(text).lower() if ch.isalnum())
+
+
+def title_matches_keyword(title: str, keyword: str) -> bool:
+    """標題是否包含搜尋關鍵字的每一個詞（不分順序、忽略空白與符號）。
+
+    用來在花 token 之前先排除「搜尋結果裡的相關商品」，例如搜 5070ti 時的 5070、5060。
+    標題解析不到時不排除，交給後續流程。
+    """
+    if not title or title == "未知標題":
+        return True
+    tokens = [_normalize_for_match(t) for t in str(keyword).split()]
+    tokens = [t for t in tokens if t]
+    if not tokens:
+        return True
+    normalized_title = _normalize_for_match(title)
+    return all(token in normalized_title for token in tokens)
+
+
 def filter_search_items(
     items: list[dict], *, free_shipping: bool = False, region_filter: str = ""
 ) -> list[dict]:

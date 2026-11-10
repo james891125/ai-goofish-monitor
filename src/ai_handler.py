@@ -19,6 +19,8 @@ if sys.platform.startswith('win'):
 
 from src.config import (
     AI_DEBUG_MODE,
+    AI_IMAGE_MAX_SIDE,
+    AI_MAX_IMAGES,
     IMAGE_DOWNLOAD_HEADERS,
     IMAGE_SAVE_DIR,
     TASK_IMAGE_DIR_PREFIX,
@@ -27,6 +29,7 @@ from src.config import (
     client,
 )
 from src.ai_message_builder import (
+    build_ai_product_payload,
     build_analysis_text_prompt,
     build_user_message_content,
 )
@@ -225,10 +228,28 @@ def cleanup_ai_logs(logs_dir: str, keep_days: int = 1) -> None:
         safe_print(f"   [日誌] 清理AI日誌時出錯: {e}")
 
 
+def _encode_resized_jpeg(image_path):
+    """縮小並重新壓縮圖片，圖片 token 數與尺寸有關，縮小後可大幅降低用量。"""
+    from io import BytesIO
+
+    from PIL import Image
+
+    with Image.open(image_path) as image:
+        image = image.convert("RGB")
+        image.thumbnail((AI_IMAGE_MAX_SIDE, AI_IMAGE_MAX_SIDE))
+        buffer = BytesIO()
+        image.save(buffer, format="JPEG", quality=75, optimize=True)
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+
 def encode_image_to_base64(image_path):
     """將本地圖片檔案編碼為 Base64 字串。"""
     if not image_path or not os.path.exists(image_path):
         return None
+    try:
+        return _encode_resized_jpeg(image_path)
+    except Exception:
+        pass
     try:
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode('utf-8')
@@ -306,7 +327,7 @@ async def get_ai_analysis(product_data, image_paths=None, prompt_text=""):
         safe_print("   [AI分析] 錯誤：未提供AI分析所需的prompt文字。")
         return None
 
-    product_details_json = json.dumps(product_data, ensure_ascii=False, indent=2)
+    product_details_json = build_ai_product_payload(product_data)
     system_prompt = prompt_text
 
     if AI_DEBUG_MODE:
@@ -319,7 +340,7 @@ async def get_ai_analysis(product_data, image_paths=None, prompt_text=""):
 
     image_data_urls = []
     if image_paths:
-        for path in image_paths:
+        for path in image_paths[:AI_MAX_IMAGES]:
             base64_image = encode_image_to_base64(path)
             if base64_image:
                 image_data_urls.append(f"data:image/jpeg;base64,{base64_image}")
@@ -364,7 +385,7 @@ async def get_ai_analysis(product_data, image_paths=None, prompt_text=""):
         safe_print(f"   [日誌] 儲存AI分析日誌時出錯: {e}")
 
     # 增強的AI呼叫，包含更嚴格的結構化輸出控制和重試機制
-    max_retries = 4
+    max_retries = 3
     api_mode = CHAT_COMPLETIONS_API_MODE
     use_response_format = ENABLE_RESPONSE_FORMAT
     use_temperature = True

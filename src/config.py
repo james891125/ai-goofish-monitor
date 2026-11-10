@@ -33,6 +33,13 @@ RUN_HEADLESS = os.getenv("RUN_HEADLESS", "true").lower() != "false"
 LOGIN_IS_EDGE = os.getenv("LOGIN_IS_EDGE", "false").lower() == "true"
 RUNNING_IN_DOCKER = os.getenv("RUNNING_IN_DOCKER", "false").lower() == "true"
 AI_DEBUG_MODE = os.getenv("AI_DEBUG_MODE", "false").lower() == "true"
+# --- AI 用量控制 ---
+# 每件商品最多送給 AI 幾張圖片（圖片是 token 消耗的大宗），0 表示不送圖片
+AI_MAX_IMAGES = max(0, int(os.getenv("AI_MAX_IMAGES", "2") or 0))
+# 圖片送出前縮到最長邊不超過這個像素
+AI_IMAGE_MAX_SIDE = max(256, int(os.getenv("AI_IMAGE_MAX_SIDE", "768") or 768))
+# 標題完全沒包含搜尋關鍵字的商品，不取得詳情也不送 AI
+TITLE_PREFILTER = os.getenv("TITLE_PREFILTER", "true").lower() != "false"
 SKIP_AI_ANALYSIS = os.getenv("SKIP_AI_ANALYSIS", "false").lower() == "true"
 ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() == "true"
 ENABLE_RESPONSE_FORMAT = os.getenv("ENABLE_RESPONSE_FORMAT", "true").lower() == "true"

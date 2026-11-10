@@ -39,7 +39,7 @@ def test_get_ai_analysis_stops_after_internal_retries_when_content_is_none(
             )
         )
 
-    assert call_count["value"] == 4
+    assert call_count["value"] == 3
 
 
 def test_get_ai_analysis_returns_parsed_json(monkeypatch, tmp_path):

@@ -1,7 +1,20 @@
 """
 AI 請求訊息構造輔助函式
 """
-from typing import Dict, List, Union
+import json
+from typing import Any, Dict, List, Union
+
+DESCRIPTION_MAX_CHARS = 600
+# 圖片網址很長又對判斷沒有幫助，圖片本身另外以圖片訊息送出
+_ITEM_FIELDS_DROPPED = {"商品圖片列表", "商品主圖連結", "商品連結", "賣家ID", "發布時間"}
+_PRICE_POSITION_FIELDS = (
+    "current_price",
+    "market_avg_price",
+    "market_median_price",
+    "price_change_percent",
+    "deal_score",
+    "deal_label",
+)
 
 
 TEXT_ONLY_ANALYSIS_NOTE = (
@@ -46,3 +59,27 @@ def build_user_message_content(
     ]
     user_content.append({"type": "text", "text": text_prompt})
     return user_content
+
+
+def build_ai_product_payload(product_data: Dict[str, Any]) -> str:
+    """只保留 AI 判斷需要的欄位並壓縮成單行 JSON，減少每次請求的 token。"""
+    item = dict(product_data.get("商品資訊") or {})
+    for key in _ITEM_FIELDS_DROPPED:
+        item.pop(key, None)
+    description = item.get("商品描述")
+    if isinstance(description, str) and len(description) > DESCRIPTION_MAX_CHARS:
+        item["商品描述"] = description[:DESCRIPTION_MAX_CHARS] + "…（已截斷）"
+
+    reference = product_data.get("價格參考") or {}
+    position = reference.get("本商品價格位置") or {}
+    slim_reference = {
+        "目前搜尋樣本": reference.get("目前搜尋樣本"),
+        "本商品價格位置": {k: position[k] for k in _PRICE_POSITION_FIELDS if k in position},
+    }
+    payload = {
+        "搜尋關鍵字": product_data.get("搜尋關鍵字"),
+        "商品資訊": item,
+        "賣家資訊": product_data.get("賣家資訊") or {},
+        "價格參考": slim_reference,
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))

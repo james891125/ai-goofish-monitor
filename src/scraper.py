@@ -22,6 +22,7 @@ from src.config import (
     RUN_HEADLESS,
     RUNNING_IN_DOCKER,
     SKIP_AI_ANALYSIS,
+    TITLE_PREFILTER,
     STATE_FILE,
 )
 from src.shopee import (
@@ -37,6 +38,7 @@ from src.shopee import (
     parse_item_detail,
     parse_search_items,
     parse_shop_info,
+    title_matches_keyword,
     wants_latest_sort,
 )
 from src.utils import (
@@ -46,7 +48,7 @@ from src.utils import (
     save_to_jsonl,
 )
 from src.rotation import RotationPool, load_state_files, parse_proxy_pool, RotationItem
-from src.failure_guard import FailureGuard
+from src.failure_guard import FailureGuard, _atomic_write_json
 from src.services.account_strategy_service import resolve_account_runtime_plan
 from src.infrastructure.persistence.storage_names import build_result_filename
 from src.services.item_analysis_dispatcher import (
@@ -386,6 +388,24 @@ def _raise_if_blocked(url: str) -> None:
         raise RiskControlError(f"蝦皮要求人機驗證: {url}")
 
 
+def persist_session_cookies(state_file: str, snapshot: dict, cookies: list) -> bool:
+    """把瀏覽器目前的蝦皮 Cookie 寫回登入檔，讓通過驗證後新發的 Cookie 下次還能用。
+
+    只更新 cookies，登入檔裡的其他資料（瀏覽器環境、標頭）原樣保留。
+    """
+    shopee_cookies = [c for c in cookies if "shopee" in str(c.get("domain", "")).lower()]
+    if not shopee_cookies or not isinstance(snapshot, dict):
+        return False
+    updated = dict(snapshot)
+    updated["cookies"] = shopee_cookies
+    try:
+        _atomic_write_json(state_file, updated)
+    except OSError as exc:
+        print(f"警告：無法把更新後的 Cookie 寫回 {state_file}: {exc}")
+        return False
+    return True
+
+
 async def _fetch_search_payload(page, search_url: str) -> dict:
     """開啟搜尋頁，並攔截頁面自己發出的 search_items API 回應。"""
     try:
@@ -597,6 +617,7 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
             context_kwargs = _default_context_options()
             storage_state_arg = state_file
             analysis_dispatcher: Optional[ItemAnalysisDispatcher] = None
+            session_ok = False
 
             if isinstance(snapshot_data, dict):
                 # 新版擴充功能匯出的增強快照，包含環境和Header
@@ -652,6 +673,7 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                     )
                     log_time(f"開始處理第 {page_num}/{max_pages} 頁: {search_url}")
                     search_payload = await _load_search_page(page, search_url)
+                    session_ok = True
                     raw_items = parse_search_items(search_payload)
                     if not raw_items:
                         log_time(f"第 {page_num} 頁沒有商品，停止翻頁。")
@@ -659,9 +681,12 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                             print(json.dumps(search_payload, ensure_ascii=False)[:2000])
                         break
 
-                    if sum(1 for i in raw_items if i["商品標題"] == "未知標題") * 2 > len(raw_items):
+                    missing_titles = sum(1 for i in raw_items if i["商品標題"] == "未知標題")
+                    missing_prices = sum(1 for i in raw_items if i["目前售價"] == "價格異常")
+                    if (missing_titles + missing_prices) * 2 > len(raw_items):
                         print(
-                            "提示：多數搜尋結果沒有解析到標題（會改用商品詳情補上）。"
+                            f"提示：{len(raw_items)} 件搜尋結果中，{missing_titles} 件沒有標題、"
+                            f"{missing_prices} 件沒有價格（標題會改用商品詳情補上）。"
                             f"搜尋結果欄位結構：{describe_search_entry(search_payload)}"
                         )
                     basic_items = filter_search_items(
@@ -673,6 +698,17 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                         f"第 {page_num} 頁解析到 {len(raw_items)} 件商品，"
                         f"篩選後剩 {len(basic_items)} 件。"
                     )
+                    if TITLE_PREFILTER:
+                        before = len(basic_items)
+                        basic_items = [
+                            i for i in basic_items
+                            if title_matches_keyword(i["商品標題"], keyword)
+                        ]
+                        if before != len(basic_items):
+                            log_time(
+                                f"標題未包含搜尋關鍵字「{keyword}」的 {before - len(basic_items)} 件商品"
+                                "已略過（不取得詳情，也不送 AI）。"
+                            )
                     if not basic_items:
                         print(
                             explain_filters(
@@ -795,6 +831,14 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                 await asyncio.sleep(5)
                 if debug_limit:
                     input("按回車鍵關閉瀏覽器...")
+                if session_ok:
+                    try:
+                        if persist_session_cookies(
+                            state_file, snapshot_data, await context.cookies()
+                        ):
+                            log_time("已把最新的蝦皮 Cookie 存回登入檔，下次執行會沿用。")
+                    except Exception as exc:
+                        print(f"警告：儲存最新 Cookie 時出錯: {exc}")
                 await browser.close()
 
         return processed_item_count

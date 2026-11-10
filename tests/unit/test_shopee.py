@@ -150,3 +150,14 @@ def test_parse_search_items_supports_item_card_layout():
     assert items[0]["商品主圖連結"].endswith("/tw-card")
     shape = shopee.describe_search_entry(payload)
     assert "item_card_displayed_asset" in shape and "卡片版商品" not in shape
+
+
+def test_title_matches_keyword_ignores_spaces_and_order_but_keeps_model_digits():
+    kw = "rtx 5070ti"
+    assert shopee.title_matches_keyword("ZOTAC RTX5070 Ti 天啟 OC 顯示卡", kw)
+    assert shopee.title_matches_keyword("微星 GeForce RTX 5070 TI 16G", kw)
+    assert not shopee.title_matches_keyword("MSI 微星 RTX5070 12G 顯示卡", kw)
+    assert not shopee.title_matches_keyword("華碩 RTX 5060 Ti 16G", kw)
+    # 解析不到標題時不排除
+    assert shopee.title_matches_keyword("未知標題", kw)
+    assert shopee.title_matches_keyword("任何商品", "")
