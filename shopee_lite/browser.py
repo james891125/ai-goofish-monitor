@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 import random
+import shutil
 import time
 from pathlib import Path
 from typing import Callable, Optional
@@ -69,16 +70,40 @@ def build_context_options(snapshot: dict) -> dict:
     return options
 
 
+_LOGIN_COOKIES = ("SPC_EC", "SPC_ST")
+_EMPTY = {"", "-", '""'}
+
+
+def has_login_cookie(cookies) -> bool:
+    return any(
+        c.get("name") in _LOGIN_COOKIES
+        and str(c.get("value") or "").strip() not in _EMPTY
+        and "shopee" in str(c.get("domain", "")).lower()
+        for c in cookies or []
+        if isinstance(c, dict)
+    )
+
+
+def lost_login(snapshot: dict, cookies: list) -> bool:
+    """原本是已登入的登入檔，但瀏覽器現在的 Cookie 已經不是登入狀態（例如被蝦皮登出）。"""
+    return has_login_cookie((snapshot or {}).get("cookies")) and not has_login_cookie(cookies)
+
+
 def persist_session_cookies(state_file: str, snapshot: dict, cookies: list) -> bool:
-    """把瀏覽器最新的蝦皮 Cookie 寫回登入檔，通過驗證後新發的 Cookie 下次就能沿用。"""
+    """把瀏覽器最新的蝦皮 Cookie 寫回登入檔，通過驗證後新發的 Cookie 下次就能沿用。
+
+    保護措施：新的 Cookie 如果已經不是登入狀態，就不覆蓋；每次覆蓋前都先備份成 .bak。
+    """
     shopee_cookies = [c for c in cookies if "shopee" in str(c.get("domain", "")).lower()]
-    if not shopee_cookies or not isinstance(snapshot, dict):
+    if not shopee_cookies or not isinstance(snapshot, dict) or lost_login(snapshot, shopee_cookies):
         return False
     updated = dict(snapshot)
     updated["cookies"] = shopee_cookies
     target = Path(state_file)
     tmp = target.with_suffix(target.suffix + ".tmp")
     try:
+        if target.exists():
+            shutil.copyfile(target, target.with_suffix(target.suffix + ".bak"))
         tmp.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
         for attempt in range(10):
             try:
@@ -146,8 +171,14 @@ class ShopeeBrowser:
     async def __aexit__(self, exc_type, exc, tb) -> None:
         try:
             if self._session_ok and self.context:
-                if persist_session_cookies(self.state_file, self._snapshot, await self.context.cookies()):
-                    self.log("已把最新的蝦皮 Cookie 存回登入檔，下次執行會沿用。")
+                cookies = await self.context.cookies()
+                if lost_login(self._snapshot, cookies):
+                    self.log(
+                        "注意：這次執行後瀏覽器裡的蝦皮已經不是登入狀態（可能被蝦皮登出或限流）。"
+                        "為了不弄壞你的登入檔，沒有覆蓋它；若之後持續出錯，請重新提取 Cookie。"
+                    )
+                elif persist_session_cookies(self.state_file, self._snapshot, cookies):
+                    self.log("已把最新的蝦皮 Cookie 存回登入檔（舊的備份為 .bak），下次執行會沿用。")
         except Exception as error:  # noqa: BLE001
             self.log(f"儲存最新 Cookie 時出錯: {error}")
         finally:
@@ -155,6 +186,14 @@ class ShopeeBrowser:
                 await self._browser.close()
             if self._playwright:
                 await self._playwright.stop()
+
+    @staticmethod
+    async def _is_error_page(page) -> bool:
+        """蝦皮的通用錯誤頁（「頁面無法顯示」），常見於被限流或環境異常。"""
+        try:
+            return "頁面無法顯示" in (await page.content())
+        except Exception:  # noqa: BLE001
+            return False
 
     @staticmethod
     def _raise_if_blocked(url: str) -> None:
@@ -170,6 +209,8 @@ class ShopeeBrowser:
             response = await info.value
         except PlaywrightTimeoutError:
             self._raise_if_blocked(page.url)
+            if await self._is_error_page(page):
+                raise RiskControlError("蝦皮顯示「頁面無法顯示」錯誤頁")
             raise
         self._raise_if_blocked(page.url)
         if not response.ok:
@@ -181,7 +222,8 @@ class ShopeeBrowser:
 
     async def _wait_for_manual_verification(self, page) -> bool:
         self.log(
-            f"蝦皮要求驗證。請在跳出的瀏覽器視窗完成驗證，完成後回到搜尋結果頁即可（最多等 {self.verify_timeout} 秒）。"
+            "蝦皮沒有正常回傳搜尋結果（可能是要求驗證，或顯示「頁面無法顯示」錯誤頁）。"
+            f"請在瀏覽器視窗完成驗證；若是錯誤頁，按「返回首頁」後重新搜尋一次即可（最多等 {self.verify_timeout} 秒）。"
         )
         deadline = asyncio.get_running_loop().time() + self.verify_timeout
         while True:

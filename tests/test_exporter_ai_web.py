@@ -152,3 +152,36 @@ def test_web_rejects_foreign_hosts_and_non_json_posts(server):
     assert status == 400 and "關鍵字" in json.loads(raw)["error"]
     status, raw = call(server, "POST", "/api/run", {"keywords": "x", "detail": "bogus"})
     assert status == 400
+
+
+def test_persist_never_overwrites_a_logged_in_file_with_a_logged_out_jar(tmp_path):
+    state = tmp_path / "s.json"
+    logged_in = {"cookies": [{"name": "SPC_EC", "value": "good", "domain": ".shopee.tw", "path": "/"}]}
+    state.write_text(json.dumps(logged_in), encoding="utf-8")
+    logged_out = [{"name": "SPC_EC", "value": "-", "domain": ".shopee.tw", "path": "/"}]
+
+    from shopee_lite.browser import lost_login
+
+    assert lost_login(logged_in, logged_out) is True
+    assert persist_session_cookies(str(state), logged_in, logged_out) is False
+    assert json.loads(state.read_text(encoding="utf-8")) == logged_in   # 原檔沒被動
+
+    refreshed = [{"name": "SPC_EC", "value": "newer", "domain": ".shopee.tw", "path": "/"}]
+    assert persist_session_cookies(str(state), logged_in, refreshed) is True
+    assert json.loads(state.read_text(encoding="utf-8"))["cookies"][0]["value"] == "newer"
+    backup = json.loads((tmp_path / "s.json.bak").read_text(encoding="utf-8"))
+    assert backup["cookies"][0]["value"] == "good"                      # 舊的留有備份
+
+
+def test_error_page_is_recognised():
+    from shopee_lite.browser import ShopeeBrowser
+
+    class Page:
+        def __init__(self, html):
+            self.html = html
+
+        async def content(self):
+            return self.html
+
+    assert asyncio.run(ShopeeBrowser._is_error_page(Page("<h1>頁面無法顯示</h1>"))) is True
+    assert asyncio.run(ShopeeBrowser._is_error_page(Page("<h1>搜尋結果</h1>"))) is False
