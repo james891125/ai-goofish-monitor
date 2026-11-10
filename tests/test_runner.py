@@ -150,3 +150,32 @@ def test_parse_ai_reply_tolerates_code_fences_and_invalid_values():
     assert parsed[0]["狀態"] == "" and parsed[0]["記憶體"] == "16GB" and parsed[0]["儲存容量"] == ""
     with pytest.raises(ValueError):
         parse_ai_reply("抱歉我辦不到")
+
+
+def test_accessory_filter_keeps_real_products():
+    from shopee_lite.runner import is_accessory
+
+    accessories = [
+        "hoda 晶盾貼 Apple Watch S11 S10 Se 3D熱彎保護貼",
+        "【MK3C】小香風四葉草錶帶⚡不鏽鋼錶帶 Apple Watch S11 S10",
+        "RayCue Mac Mini M4/M4 Pro專用擴充底座",
+        "全鋁CNC Mac mini M4 Pro 机箱升级版 預購 代購金",
+        "（已售出）近全新Apple Watch S10 46mm GPS",
+    ]
+    products = [
+        "台中 Apple Watch 10 GPS 46mm 64G黑色鋁金屬錶殼 S10 99%",
+        "【艾爾巴二手】Apple Watch S10 A2999 46MM GPS 黑#智慧手錶#中壢店32M9K",
+        "[龍龍3C] 蘋果 Apple Mac Mini M4 24G 512GB SSD 迷你主機 桌上型電腦 A3238",
+        "技嘉平台 RTX5070 電競主機 Ultra 7/32G/1TB 靜音機殼 原價屋",
+    ]
+    assert all(is_accessory(t) for t in accessories)
+    assert not any(is_accessory(t) for t in products)
+
+
+def test_description_boilerplate_does_not_mark_item_as_broken_or_add_fake_sizes():
+    from shopee_lite.extract import extract_fields
+
+    desc = "七天鑑賞期，非人為故障享原廠保固一年。預購商品另計。傳輸速率 10Gb/s，贈 180G 雲端流量。"
+    got = extract_fields(desc, from_description=True)
+    assert got["狀態"] == "" and got["記憶體"] == "" and got["儲存容量"] == ""
+    assert got["保固"] == "保固 1 年"

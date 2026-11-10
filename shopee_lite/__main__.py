@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="off=只用規則；on=規則抓不到的才交給 AI 補；compare=規則與 AI 並排比較",
     )
     run.add_argument("--no-title-match", action="store_true", help="不要排除標題沒有包含關鍵字的商品")
+    run.add_argument("--keep-accessories", action="store_true", help="不要排除保護貼、錶帶、機殼等配件")
     run.add_argument("--webhook", action="store_true", help="完成後把 CSV 傳到 WEBHOOK_URL")
     run.add_argument("--headless", action="store_true", help="隱藏瀏覽器視窗（遇到驗證時無法手動處理）")
 
@@ -61,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
         detail=args.detail,
         ai=args.ai,
         title_match=not args.no_title_match,
+        exclude_accessories=not args.keep_accessories,
     )
     settings = service.load_settings()
     if args.headless:

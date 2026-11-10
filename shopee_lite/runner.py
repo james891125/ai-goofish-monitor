@@ -9,6 +9,20 @@ from .errors import LoginRequiredError, RiskControlError
 from .extract import FIELDS, extract_fields
 
 DETAIL_MODES = ("off", "auto", "all")
+# 搜尋主機時常混進大量配件；標題含這些詞的商品預設不列入
+ACCESSORY_WORDS = (
+    "保護貼", "保護殼", "保護套", "保護膜", "保護框", "鋼化膜", "玻璃貼", "貼膜", "螢幕貼", "滿版貼",
+    "錶帶", "表帶", "錶鏈", "表鏈", "手錶殼", "矽膠套", "外殼", "吊墜", "充電線", "充電器", "充電座", "充電盤", "傳輸線",
+    "轉接頭", "轉接線", "轉接器", "支架", "底座", "擴充基座", "外接盒", "開機鍵", "電源鍵", "供電套件", "外框架", "機箱", "散熱器", "散熱座", "散熱墊",
+    "拓展塢", "擴展塢", "擴充座", "擴充外接", "集線器", "硬碟盒", "收納", "防塵", "腳墊", "貼紙",
+    "代購金", "已售出", "已售完",
+)
+
+
+def is_accessory(title: str) -> bool:
+    lowered = str(title).lower()
+    return any(word in lowered for word in ACCESSORY_WORDS)
+
 AI_MODES = ("off", "on", "compare")
 MAX_PAGES = 10
 _NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
@@ -26,6 +40,7 @@ class RunOptions:
     detail: str = "auto"
     ai: str = "off"
     title_match: bool = True
+    exclude_accessories: bool = True
     page_pause: tuple[float, float] = (5, 10)
     detail_pause: tuple[float, float] = (3, 6)
 
@@ -86,7 +101,8 @@ def _apply_detail(row: dict, payload: dict) -> None:
     attrs = detail.get("商品屬性") or {}
     attr_text = " ".join(f"{k}:{v}" for k, v in attrs.items())
     row["_描述"] = (description + " " + attr_text).strip()
-    merged = extract_fields(row["品名"] + "\n" + row["_描述"])
+    # 描述只用來補空白欄位，而且不拿來判斷「故障／預購」（制式文字容易誤判）
+    merged = extract_fields(row["_描述"], from_description=True)
     for name in FIELDS:
         if not row[name] and merged[name]:
             row[name] = merged[name]
@@ -192,6 +208,8 @@ async def run_search(
             )
             if options.title_match:
                 items = [i for i in items if shopee.title_matches_keyword(i["商品標題"], keyword)]
+            if options.exclude_accessories:
+                items = [i for i in items if not is_accessory(i["商品標題"])]
             added = 0
             for item in items:
                 item_id = str(item.get("商品ID"))

@@ -26,15 +26,21 @@ def _has(text: str, words) -> bool:
     return any(word in text for word in words)
 
 
-def extract_condition(text: str) -> str:
+def extract_condition(text: str, *, from_description: bool = False) -> str:
+    """from_description=True 時不判斷「故障、預購、展示機」。
+
+    賣場描述常有「非人為故障保固」「預購商品另計」這類制式文字，會把正常商品誤判。
+    這三種狀態只相信標題。
+    """
     lowered = text.lower()
-    if _has(lowered, _BROKEN):
-        return "故障/零件機"
-    if _has(lowered, _PREORDER):
-        return "預購"
+    if not from_description:
+        if _has(lowered, _BROKEN):
+            return "故障/零件機"
+        if _has(lowered, _PREORDER):
+            return "預購"
     if _has(lowered, _REFURB):
         return "福利品"
-    if _has(lowered, _DISPLAY):
+    if not from_description and _has(lowered, _DISPLAY):
         return "展示機"
     if _has(lowered, _NEAR_NEW):
         return "近全新"
@@ -56,9 +62,11 @@ _STORE_AFTER = re.compile(
 _STORE_BEFORE = re.compile(
     rf"(?:SSD|HDD|硬碟|儲存空間|儲存容量|容量)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*{_UNIT}", re.IGNORECASE
 )
-_MIN_GB = 2
-_MAX_GB = 16384
 _STORAGE_FLOOR_GB = 128
+# 只接受實際存在的容量規格，避免把「180G 流量」「10Gb/s」這類數字當成容量
+_MEMORY_SIZES = {2, 3, 4, 6, 8, 12, 16, 18, 24, 32, 36, 48, 64, 96, 128}
+_STORAGE_SIZES = {32, 64, 128, 256, 512, 1024, 2048, 4096, 8192}
+_VALID_SIZES = _MEMORY_SIZES | _STORAGE_SIZES
 
 
 def _to_gb(number: str, unit: str) -> float:
@@ -88,7 +96,7 @@ def extract_capacity(text: str) -> tuple[str, str]:
 
     if memory_gb is None:
         match = _MEM_AFTER.search(text) or _MEM_BEFORE.search(text)
-        if match:
+        if match and float(match.group(1)) in _MEMORY_SIZES:
             memory_gb = float(match.group(1))
     if storage_gb is None:
         match = _STORE_AFTER.search(text)
@@ -103,10 +111,11 @@ def extract_capacity(text: str) -> tuple[str, str]:
         sizes = []
         for found in _SIZE.finditer(text):
             gb = _to_gb(found.group(1), found.group(2))
-            # 5G 是行動網路世代，不是容量
-            if gb == 5 or text[found.end():found.end() + 3] in ("網路", "網絡", "行動", "訊號"):
+            tail = text[found.end():found.end() + 3]
+            # 排除行動網路（5G 網路）與傳輸速率（10Gb/s、10Gbps）
+            if tail[:2] in ("網路", "網絡", "行動", "訊號") or tail[:2] == "/s" or tail[:1] == "/秒":
                 continue
-            if _MIN_GB <= gb <= _MAX_GB and gb not in (memory_gb, storage_gb):
+            if gb in _VALID_SIZES and gb not in (memory_gb, storage_gb):
                 sizes.append(gb)
         sizes = sorted(set(sizes))
         if memory_gb is None and storage_gb is None:
@@ -181,10 +190,10 @@ def extract_purchase_date(text: str) -> str:
     return _fmt_date(*match.groups()[:3])
 
 
-def extract_fields(text: str) -> dict:
+def extract_fields(text: str, *, from_description: bool = False) -> dict:
     memory, storage = extract_capacity(text)
     return {
-        "狀態": extract_condition(text),
+        "狀態": extract_condition(text, from_description=from_description),
         "記憶體": memory,
         "儲存容量": storage,
         "保固": extract_warranty(text),

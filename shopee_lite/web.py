@@ -124,6 +124,7 @@ def parse_options(data: dict) -> RunOptions:
         detail=detail,
         ai=ai,
         title_match=bool(data.get("title_match", True)),
+        exclude_accessories=bool(data.get("exclude_accessories", True)),
     )
     options.validate()
     return options

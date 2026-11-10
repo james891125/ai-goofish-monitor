@@ -90,6 +90,7 @@
       <label class="check"><input id="latest" type="checkbox"> 依最新上架排序</label>
       <label class="check"><input id="freeShip" type="checkbox"> 只留免運</label>
       <label class="check"><input id="titleMatch" type="checkbox" checked> 排除標題沒包含關鍵字的商品</label>
+      <label class="check"><input id="noAccessory" type="checkbox" checked> 排除配件（保護貼、錶帶、機殼…）</label>
     </div>
     <div class="row">
       <button id="run" class="primary">開始搜尋</button>
@@ -217,6 +218,7 @@ $('run').onclick = async () => {
       min_price: $('minPrice').value, max_price: $('maxPrice').value, region: $('region').value,
       detail: $('detail').value, ai: $('ai').value, latest: $('latest').checked,
       free_shipping: $('freeShip').checked, title_match: $('titleMatch').checked,
+      exclude_accessories: $('noAccessory').checked,
     });
     startPolling();
   } catch (e) { $('runState').textContent = e.message; $('runState').className = 'hint bad'; }
