@@ -127,3 +127,26 @@ def test_explain_filters_reports_why_items_were_dropped():
     assert "1 件帶有免運標記" in text
     assert "0 件符合" in text and "北市大安區" in text
     assert shopee.explain_filters([], free_shipping=True) == ""
+
+
+def test_parse_search_items_supports_item_card_layout():
+    payload = {
+        "items": [
+            {
+                "item_card": {
+                    "itemid": 5,
+                    "shopid": 6,
+                    "item_card_displayed_asset": {"name": "卡片版商品", "image": "tw-card"},
+                    "item_card_display_price": {"price": 1290000000},
+                }
+            }
+        ]
+    }
+
+    items = shopee.parse_search_items(payload)
+
+    assert items[0]["商品標題"] == "卡片版商品"
+    assert items[0]["目前售價"] == "$12,900"
+    assert items[0]["商品主圖連結"].endswith("/tw-card")
+    shape = shopee.describe_search_entry(payload)
+    assert "item_card_displayed_asset" in shape and "卡片版商品" not in shape

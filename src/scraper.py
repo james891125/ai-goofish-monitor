@@ -26,6 +26,7 @@ from src.config import (
 )
 from src.shopee import (
     build_search_url,
+    describe_search_entry,
     explain_filters,
     filter_search_items,
     is_detail_response,
@@ -658,6 +659,11 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                             print(json.dumps(search_payload, ensure_ascii=False)[:2000])
                         break
 
+                    if sum(1 for i in raw_items if i["商品標題"] == "未知標題") * 2 > len(raw_items):
+                        print(
+                            "提示：多數搜尋結果沒有解析到標題（會改用商品詳情補上）。"
+                            f"搜尋結果欄位結構：{describe_search_entry(search_payload)}"
+                        )
                     basic_items = filter_search_items(
                         raw_items,
                         free_shipping=bool(free_shipping),

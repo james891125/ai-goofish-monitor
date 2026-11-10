@@ -5,6 +5,7 @@
 輸出欄位沿用原本管線使用的鍵名（商品標題 / 目前售價 / 商品連結 ...），
 讓 AI 分析、通知、結果儲存與前端都不需要改動。
 """
+import json
 import os
 from datetime import datetime
 from typing import Any, Optional
@@ -160,6 +161,36 @@ def _build_tags(basic: dict) -> list[str]:
     return tags
 
 
+def _flatten_item_card(entry: dict) -> dict:
+    """蝦皮較新的搜尋結果把資料拆在 item_card 的多個子區塊裡，攤平成舊格式的欄位。"""
+    card = entry.get("item_card")
+    if not isinstance(card, dict):
+        return {}
+    flat: dict[str, Any] = {}
+    for block in card.values():
+        if isinstance(block, dict):
+            for key, value in block.items():
+                flat.setdefault(key, value)
+    for key, value in card.items():
+        if not isinstance(value, dict):
+            flat.setdefault(key, value)
+    return flat
+
+
+def describe_search_entry(payload: Any) -> str:
+    """回傳第一筆搜尋結果的欄位結構（不含內容），解析不到標題時用來除錯。"""
+    items = payload.get("items") if isinstance(payload, dict) else None
+    if not items or not isinstance(items[0], dict):
+        return "回應中沒有 items"
+
+    def shape(value: Any, depth: int = 0) -> Any:
+        if isinstance(value, dict) and depth < 3:
+            return {k: shape(v, depth + 1) for k, v in value.items()}
+        return type(value).__name__
+
+    return json.dumps(shape(items[0]), ensure_ascii=False)
+
+
 def parse_search_items(payload: Any) -> list[dict]:
     """解析 search_items API，回傳商品基礎資訊列表。"""
     if not isinstance(payload, dict):
@@ -168,7 +199,7 @@ def parse_search_items(payload: Any) -> list[dict]:
     for entry in payload.get("items") or []:
         if not isinstance(entry, dict):
             continue
-        basic = entry.get("item_basic") or entry
+        basic = entry.get("item_basic") or _flatten_item_card(entry) or entry
         item_id = basic.get("itemid") or entry.get("itemid")
         shop_id = basic.get("shopid") or entry.get("shopid")
         if not item_id or not shop_id:

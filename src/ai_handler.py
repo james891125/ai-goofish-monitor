@@ -259,11 +259,6 @@ def validate_ai_response_format(parsed_response):
         safe_print("   [AI分析] 警告：criteria_analysis必須是非空字典")
         return False
 
-    # 檢查seller_type欄位（所有商品都需要）
-    if "seller_type" not in criteria_analysis:
-        safe_print("   [AI分析] 警告：criteria_analysis缺少必需欄位 'seller_type'")
-        return False
-
     # 檢查資料型別
     if not isinstance(parsed_response.get("is_recommended"), bool):
         safe_print("   [AI分析] 警告：is_recommended欄位不是布林型別")
