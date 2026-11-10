@@ -4,11 +4,12 @@
 
 ## Windows 雙擊啟動更新
 
-本次新增 `啟動蝦皮監控.cmd` 及選用的 `實驗瀏覽收集.cmd`。Linux 離線完整回歸為 **425 passed、16 skipped**；16 項略過項目均須在 Windows 執行。前端 **22 項測試通過**，TypeScript／Vite 建置通過，`npm audit --omit=dev` 為 0 項，`git diff --check` 通過。
+本次新增 `啟動蝦皮監控.cmd` 及選用的 `實驗瀏覽收集.cmd`。Linux 離線完整回歸為 **430 passed、16 skipped**；16 項略過項目均須在 Windows 執行。前端 **22 項測試通過**，TypeScript／Vite 建置通過，`npm audit` 為 0 項，`git diff --check` 通過。
 
 - 包含健康端點辨識、占用連接埠拒絕、只停止自己啟動的程序、既有設定保留、安裝快取、同資料夾互斥鎖、中文／空白／特殊字元路徑、首次設定提示與選用依賴確認。
 - Windows 專用案例實際呼叫 Windows PowerShell 5.1；CMD 轉送與拒絕情境使用本機編譯的離線替身；記事本互動亦為測試替身。這些不是 SmartScreen、組織群組原則或真實桌面操作驗收。
 - 本次未修改任何使用者電腦的執行政策、未解除檔案封鎖、未登入蝦皮，也未使用真實 AI Key。普通雙擊不自動登入；實驗捷徑仍須使用者自行確認與登入。
+- 首版 `13004c1` 的 Windows CI 為 424 passed、11 failed、6 skipped；修正後需重新驗證。問題包括 Windows 連線拒絕判定延遲、PS5.1 繼承其他版本模組路徑時缺少雜湊指令，以及測試呼叫 CMD 的外層引號；另補 UTF-8 BOM 設定檔首行讀取與首次啟動測試的退出碼檢查。未停用失敗測試。
 - 發布後應以 PR #1 對應最新提交的 Linux／Windows／Docker CI 為準。當前文件記錄的是發布前本機結果，不沿用舊版 Windows 綠燈；最終遠端結果與固定 ZIP 連結記錄在 PR 說明。
 
 ## 實驗逐件瀏覽與 AI 節省更新

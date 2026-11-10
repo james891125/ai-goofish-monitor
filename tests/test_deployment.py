@@ -160,3 +160,20 @@ def test_bash_check_only_without_starting_server(tmp_path, scenario):
 
 def test_release_dockerfile_does_not_drift_from_local_build():
     assert (ROOT / 'Dockerfile.release').read_text(encoding='utf-8') == (ROOT / 'Dockerfile').read_text(encoding='utf-8')
+
+
+def test_windows_utf8_bom_configuration_check_is_read_only(tmp_path):
+    import os
+    import subprocess
+    import sys
+    path = tmp_path / '.env'
+    path.write_text('WEB_USERNAME=test-user\nWEB_PASSWORD=test-only-long-password\nSERVER_PORT=8123\n', encoding='utf-8-sig')
+    before = path.read_bytes()
+    env = {key: value for key, value in os.environ.items() if key not in {'WEB_USERNAME', 'WEB_PASSWORD', 'SERVER_PORT'}}
+    env.update(PYTHONUTF8='1', PYTHONIOENCODING='utf-8', PYTHONDONTWRITEBYTECODE='1')
+    result = subprocess.run([sys.executable, str(ROOT / 'scripts/check_config.py'), '--port'], cwd=tmp_path,
+                            env=env, capture_output=True, text=True, encoding='utf-8', timeout=15)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.strip() == '8123'
+    assert path.read_bytes() == before
+    assert 'test-only-long-password' not in result.stdout + result.stderr

@@ -51,14 +51,17 @@ def probe(port: int) -> str:
 
     A malformed/nonmatching/redirecting endpoint is occupied, not our app.
     """
+    # Windows can take longer than a short connect timeout to report refusal.
+    # Only a successful exclusive bind proves the address is available. Never
+    # classify a connect timeout, permission error, or blocked bind as free.
     try:
-        with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-            pass
-    except ConnectionRefusedError:
-        return FREE
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as candidate:
+            if os.name == "nt":
+                candidate.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            candidate.bind(("127.0.0.1", port))
+            return FREE
     except OSError:
-        # Network restrictions/timeouts are not evidence that a port is free.
-        return OCCUPIED
+        pass
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=1)
     try:
         connection.request("GET", "/health", headers={"Accept": "application/json"})

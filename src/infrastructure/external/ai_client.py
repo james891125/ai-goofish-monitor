@@ -82,7 +82,7 @@ class AIClient:
         self.refresh()
 
     def _load_settings(self) -> None:
-        load_dotenv(dotenv_path=env_manager.env_file, override=True, interpolate=False)
+        load_dotenv(dotenv_path=env_manager.env_file, encoding="utf-8-sig", override=True, interpolate=False)
         self.settings = AISettings()
 
     def refresh(self) -> None:

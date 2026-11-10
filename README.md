@@ -82,7 +82,7 @@ Get-FileHash .\start.ps1 -Algorithm SHA256
 本次雙擊啟動版 `start.ps1` 的 SHA256（只適用於此份原始碼）：
 
 ```text
-C1C4C578E01CB03337C302304DB4D80FA76AA067201B798B0D0FFD32C3F20A85
+C00A73E614A1758488F32A21A34D8BFC2D23221D100185487447E67EBB9A18B1
 ```
 
 只有在有效政策為 `RemoteSigned`、雜湊一致、確認檔案來源與內容可信且組織允許時，才由使用者自行解除這**一個檔案**的來源封鎖，再啟動：

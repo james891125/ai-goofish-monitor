@@ -28,8 +28,16 @@ function Edit-LocalSettings {
 }
 
 function Get-DependencyStamp([string[]]$Paths) {
-    $Combined = ($Paths | ForEach-Object { (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash }) -join ':'
-    return $Combined
+    # Direct .NET hashing also works when PowerShell 5.1 inherits PS7's module path.
+    $Digests = foreach ($Path in $Paths) {
+        $FilePath = $Path
+        if (-not [IO.Path]::IsPathRooted($FilePath)) { $FilePath = Join-Path $PSScriptRoot $FilePath }
+        $Stream = [IO.File]::OpenRead($FilePath)
+        $Hasher = [Security.Cryptography.SHA256]::Create()
+        try { [BitConverter]::ToString($Hasher.ComputeHash($Stream)).Replace('-', '') }
+        finally { $Hasher.Dispose(); $Stream.Dispose() }
+    }
+    return ($Digests -join ':')
 }
 
 function Test-Stamp([string]$Path, [string]$Value) {

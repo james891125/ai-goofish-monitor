@@ -81,6 +81,33 @@ def test_probe_never_uses_proxy_or_follows_redirect(monkeypatch):
         assert other_calls == []
 
 
+
+def test_probe_successful_bind_needs_no_connection_or_timeout_guess(monkeypatch):
+    candidate = Mock()
+    candidate.__enter__ = Mock(return_value=candidate)
+    candidate.__exit__ = Mock(return_value=False)
+    monkeypatch.setattr(launch.socket, 'socket', Mock(return_value=candidate))
+    connection = Mock(side_effect=AssertionError('a free bind needs no HTTP request'))
+    monkeypatch.setattr(launch.http.client, 'HTTPConnection', connection)
+    assert launch.probe(8123) == launch.FREE
+    candidate.bind.assert_called_once_with(('127.0.0.1', 8123))
+    connection.assert_not_called()
+
+
+@pytest.mark.parametrize('error', [PermissionError('blocked'), TimeoutError('not evidence of availability')])
+def test_probe_failed_bind_and_http_timeout_stays_occupied(monkeypatch, error):
+    candidate = Mock()
+    candidate.__enter__ = Mock(return_value=candidate)
+    candidate.__exit__ = Mock(return_value=False)
+    candidate.bind.side_effect = error
+    monkeypatch.setattr(launch.socket, 'socket', Mock(return_value=candidate))
+    connection = Mock()
+    connection.request.side_effect = TimeoutError('timeout')
+    monkeypatch.setattr(launch.http.client, 'HTTPConnection', Mock(return_value=connection))
+    assert launch.probe(8123) == launch.OCCUPIED
+    connection.close.assert_called_once()
+
+
 def test_probe_free_port():
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0))
@@ -229,6 +256,8 @@ def test_wrappers_are_crlf_utf8_and_never_override_policy():
     assert raw.startswith(b'\xef\xbb\xbf')
     text = raw.decode('utf-8-sig')
     assert "$env:PYTHONDONTWRITEBYTECODE = '1'" in text
+    assert 'Get-FileHash' not in text
+    assert '$Hasher.ComputeHash($Stream)' in text
     assert '[System.IO.File]::Copy' in text and "'.env'), $false)" in text
 
 
@@ -414,7 +443,10 @@ class Stub { static int Main(string[] args) {
     env = windows_env()
     log = tmp_path / 'arguments.log'
     env.update(SystemRoot=str(mock_root), STUB_LOG=str(log), STUB_EXIT=str(result_code))
-    result = subprocess.run([os.environ['COMSPEC'], '/d', '/c', str(root / wrapper)], input='\n',
+    # cmd /s strips its first and last command quotes. Preserve an inner pair
+    # around the entire path, rather than relying on Python's argv quoting.
+    command = f'"{os.environ["COMSPEC"]}" /d /s /c ""{root / wrapper}""'
+    result = subprocess.run(command, input='\n',
                             text=True, encoding='utf-8', errors='replace', capture_output=True, timeout=30, env=env)
     assert result.returncode == result_code, result.stdout + result.stderr
     calls = log.read_text(encoding='utf-8').splitlines()
@@ -444,12 +476,14 @@ def test_windows_first_run_copies_env_once_and_uses_notepad_confirmation(windows
 }
 function Read-Host { return '' }
 & (Join-Path $PSScriptRoot 'start.ps1') -DoubleClick
+exit $LASTEXITCODE
 ''', encoding='utf-8-sig')
     result = subprocess.run([powershell_path(), '-NoProfile', '-File', str(bootstrap)],
                             text=True, encoding='utf-8', errors='replace', capture_output=True,
                             timeout=40, env=windows_env())
     assert result.returncode == 0, result.stdout + result.stderr
     assert (root / 'copied-env.txt').read_bytes() == example
+    assert (root / 'helper-calls.txt').read_text(encoding='utf-8').splitlines() == ['existing', 'serve']
     saved = (root / '.env').read_bytes()
     second = subprocess.run([powershell_path(), '-NoProfile', '-File', str(root / 'start.ps1'), '-DoubleClick'],
                             text=True, encoding='utf-8', errors='replace', capture_output=True,

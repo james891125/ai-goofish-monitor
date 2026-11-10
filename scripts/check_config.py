@@ -39,7 +39,7 @@ def main() -> int:
     if not Path(".env").is_file():
         print("找不到 .env；請複製 .env.example 並設定登入帳號與密碼。", file=sys.stderr)
         return 1
-    config = {**os.environ, **{key: value for key, value in dotenv_values(".env", interpolate=False).items() if value is not None}}
+    config = {**os.environ, **{key: value for key, value in dotenv_values(".env", encoding="utf-8-sig", interpolate=False).items() if value is not None}}
     try:
         port = validate_config(config)
     except ValueError as exc:

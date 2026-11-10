@@ -55,3 +55,16 @@ def test_literal_dollar_syntax_round_trips_without_interpolation(tmp_path):
     value='test-${INTENTIONALLY_MISSING_NAME}-suffix'
     assert manager.update_values({'OPENAI_API_KEY':value})
     assert manager.get_value('OPENAI_API_KEY')==value
+
+
+def test_windows_utf8_bom_config_preserves_first_key(tmp_path):
+    path = tmp_path / '.env'
+    original = 'WEB_USERNAME=test-user\nWEB_PASSWORD=test-only-long-password\nOPENAI_API_KEY=test-${literal}-key\n'
+    path.write_text(original, encoding='utf-8-sig')
+    manager = EnvManager(str(path))
+    assert manager.get_value('WEB_USERNAME') == 'test-user'
+    assert manager.get_value('OPENAI_API_KEY') == 'test-${literal}-key'
+    assert manager.update_values({'OPENAI_MODEL_NAME': 'test-model'})
+    assert manager.get_value('WEB_USERNAME') == 'test-user'
+    assert manager.get_value('WEB_PASSWORD') == 'test-only-long-password'
+    assert not any(key.startswith('\ufeff') for key in manager.read_env())

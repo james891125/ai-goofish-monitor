@@ -31,7 +31,7 @@ class EnvManager:
         if not self.env_file.exists():
             return {}
 
-        loaded = dotenv_values(self.env_file, encoding="utf-8", interpolate=False)
+        loaded = dotenv_values(self.env_file, encoding="utf-8-sig", interpolate=False)
         return {
             key: value
             for key, value in loaded.items()
