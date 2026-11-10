@@ -215,9 +215,29 @@ def _dedupe_latest(records: Iterable[dict], group_key: str) -> list[dict]:
     return list(latest_by_key.values())
 
 
+OUTLIER_MIN_SAMPLES = 5
+OUTLIER_HIGH_RATIO = 3.0
+OUTLIER_LOW_RATIO = 0.25
+
+
+def _trim_outliers(prices: list[float]) -> list[float]:
+    """排除離群價格（高於中位數 3 倍或低於 1/4），避免 $459,000 這種商品把市場均價拉歪。
+
+    樣本太少時不處理；全部被排除時保留原樣本。
+    """
+    if len(prices) < OUTLIER_MIN_SAMPLES:
+        return prices
+    mid = float(median(prices))
+    if mid <= 0:
+        return prices
+    kept = [p for p in prices if mid * OUTLIER_LOW_RATIO <= p <= mid * OUTLIER_HIGH_RATIO]
+    return kept or prices
+
+
 def _summarize_prices(records: Iterable[dict]) -> dict:
     entries = [record for record in records if parse_price_value(record.get("price")) is not None]
-    prices = [float(record["price"]) for record in entries]
+    all_prices = [float(record["price"]) for record in entries]
+    prices = _trim_outliers(all_prices)
     if not prices:
         return {
             "sample_count": 0,
@@ -229,6 +249,7 @@ def _summarize_prices(records: Iterable[dict]) -> dict:
 
     return {
         "sample_count": len(prices),
+        "outlier_count": len(all_prices) - len(prices),
         "avg_price": round(sum(prices) / len(prices), 2),
         "median_price": round(float(median(prices)), 2),
         "min_price": round(min(prices), 2),

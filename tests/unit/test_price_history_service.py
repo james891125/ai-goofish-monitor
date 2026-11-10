@@ -97,3 +97,17 @@ def test_record_market_snapshots_and_build_price_history_insights(tmp_path, monk
     assert item_context["max_price"] == 10000.0
     assert item_context["price_change_amount"] == -500.0
     assert item_context["deal_label"] == "高價效比"
+
+
+def test_market_summary_excludes_extreme_outliers():
+    from src.services.price_history_service import _summarize_prices
+
+    prices = [22000, 25000, 28000, 30000, 33000, 36000, 190000, 459000]
+    summary = _summarize_prices([{"price": p} for p in prices])
+
+    assert summary["outlier_count"] == 2
+    assert summary["max_price"] == 36000
+    assert 27000 < summary["avg_price"] < 31000
+    # 樣本太少時不處理
+    few = _summarize_prices([{"price": p} for p in (1000, 2000, 90000)])
+    assert few["outlier_count"] == 0 and few["max_price"] == 90000
