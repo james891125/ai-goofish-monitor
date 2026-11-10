@@ -34,7 +34,7 @@ class ShopeeRuntime:
     def reload(self):
         self.scheduler.remove_all_jobs()
         for task in self.repository.tasks():
-            if task.enabled and task.cron:
+            if task.enabled and task.cron and task.provider != 'browser_experiment':
                 self.scheduler.add_job(self.start_task,build_cron_trigger(task.cron,timezone='Asia/Taipei'),
                                        args=[task.id],id=f'shopee_{task.id}',max_instances=1,
                                        coalesce=True,misfire_grace_time=60)

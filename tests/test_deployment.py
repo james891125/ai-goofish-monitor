@@ -88,6 +88,15 @@ def test_docker_context_excludes_local_secrets():
     assert 'usagi-org' not in (ROOT / 'Dockerfile.release').read_text(encoding='utf-8')
 
 
+def test_docker_keeps_ai_policy_but_excludes_browser_artifacts():
+    lines = (ROOT / '.dockerignore').read_text(encoding='utf-8').splitlines()
+    assert lines.index('!src/services/ai_token_policy.py') > lines.index('**/*token*')
+    assert 'browser-request*.json' in lines and 'browser-results*.json' in lines
+    requirements = (ROOT / 'requirements-runtime.txt').read_text(encoding='utf-8')
+    assert 'playwright' not in requirements.lower()
+    assert 'playwright' in (ROOT / 'requirements-browser.txt').read_text(encoding='utf-8').lower()
+
+
 def test_windows_launcher_uses_venv_without_policy_changes():
     raw = (ROOT / 'start.ps1').read_bytes()
     assert raw.startswith(b'\xef\xbb\xbf')  # Windows PowerShell 5.1 understands the Chinese text.

@@ -69,7 +69,7 @@ class ShopeeTask(BaseModel):
     task_name: str = Field(min_length=1, max_length=100)
     enabled: bool = True
     keyword: str = Field(min_length=1, max_length=200)
-    provider: Literal['mock', 'import', 'shopee'] = 'mock'
+    provider: Literal['mock', 'import', 'shopee', 'browser_experiment'] = 'mock'
     decision_mode: Literal['keyword', 'ai'] = 'keyword'
     description: str = Field(default='', max_length=10000)
     analyze_images: bool = False
@@ -102,6 +102,13 @@ class ShopeeTask(BaseModel):
 
     @model_validator(mode='after')
     def valid_task(self):
+        if self.provider == 'browser_experiment':
+            if self.decision_mode != 'ai':
+                raise ValueError('實驗瀏覽快照必須使用 AI 分析，不會以關鍵字結果代替 AI 判斷')
+            if self.cron:
+                raise ValueError('實驗瀏覽快照僅供手動分析，不支援排程或自動開啟瀏覽器')
+            if self.max_items > 5 or self.max_pages != 1:
+                raise ValueError('實驗瀏覽快照每次最多 5 件，頁數必須為 1')
         if self.min_price is not None and self.max_price is not None and self.min_price > self.max_price:
             raise ValueError('最低價格不得大於最高價格')
         if self.decision_mode == 'ai' and not self.description.strip():

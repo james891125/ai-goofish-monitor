@@ -34,3 +34,7 @@ htmlcov/
 node_modules/
 *.sqlite3
 *.sqlite3-*
+
+# Optional local browser experiment inputs and collected product snapshots
+browser-request*.json
+browser-results*.json

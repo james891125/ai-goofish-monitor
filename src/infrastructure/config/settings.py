@@ -20,6 +20,12 @@ class AISettings(BaseSettings):
     proxy_url: str | None = Field(None, validation_alias="PROXY_URL", repr=False)
     enable_response_format: bool = Field(True, validation_alias="ENABLE_RESPONSE_FORMAT")
 
+    max_output_tokens: int = Field(1200, ge=256, le=4000, validation_alias="AI_MAX_OUTPUT_TOKENS")
+    product_description_chars: int = Field(2000, ge=256, le=4000, validation_alias="AI_PRODUCT_DESCRIPTION_CHARS")
+    max_images: int = Field(2, ge=0, le=4, validation_alias="AI_MAX_IMAGES")
+    max_prompt_chars: int = Field(12000, ge=2000, le=40000, validation_alias="AI_MAX_PROMPT_CHARS")
+    empty_response_retries: int = Field(0, ge=0, le=1, validation_alias="AI_EMPTY_RESPONSE_RETRIES")
+
     def is_configured(self) -> bool:
         """判斷必要的連線設定是否已填寫，不代表已成功連線。"""
         return all(isinstance(value, str) and bool(value.strip())

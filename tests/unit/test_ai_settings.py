@@ -25,4 +25,7 @@ def test_ai_settings_do_not_create_files_or_other_settings(tmp_path, monkeypatch
     monkeypatch.chdir(tmp_path)
     AISettings(_env_file=None)
     assert list(tmp_path.iterdir()) == []
-    assert set(AISettings.model_fields) == {"api_key", "base_url", "model_name", "proxy_url", "enable_response_format"}
+    assert set(AISettings.model_fields) == {
+        "api_key", "base_url", "model_name", "proxy_url", "enable_response_format",
+        "max_output_tokens", "product_description_chars", "max_images", "max_prompt_chars", "empty_response_retries",
+    }

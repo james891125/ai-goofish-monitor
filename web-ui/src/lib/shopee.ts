@@ -1,4 +1,4 @@
-import type { Provider, ShopeeTask } from '../api/shopee'
+import type { BrowserImportPayload, BrowserRequest, Provider, ShopeeTask } from '../api/shopee'
 
 export const taiwanRegions = ['臺北市', '新北市', '桃園市', '臺中市', '臺南市', '高雄市', '基隆市', '新竹市', '嘉義市', '新竹縣', '苗栗縣', '彰化縣', '南投縣', '雲林縣', '嘉義縣', '屏東縣', '宜蘭縣', '花蓮縣', '臺東縣', '澎湖縣', '金門縣', '連江縣']
 export const scheduleOptions = [
@@ -9,7 +9,7 @@ export const scheduleOptions = [
   { value: 'custom', label: '自訂 Cron' },
 ]
 export function newTask(): ShopeeTask {
-  return { task_name: '', enabled: true, keyword: '', provider: 'mock', decision_mode: 'keyword', description: '', analyze_images: false, min_price: null, max_price: null, max_items: 50, max_pages: 3, category: null, condition: null, region: null, seller_type: null, exclude_keywords: [], exclude_ads: false, cron: null, notify: 'recommended', notify_price_drop: false, custom_prompt: '' }
+  return { task_name: '', enabled: true, keyword: '', provider: 'mock', decision_mode: 'ai', description: '', analyze_images: false, min_price: null, max_price: null, max_items: 50, max_pages: 3, category: null, condition: null, region: null, seller_type: null, exclude_keywords: [], exclude_ads: false, cron: null, notify: 'recommended', notify_price_drop: false, custom_prompt: '' }
 }
 export function sampleTask(kind: 'rtx' | 'mac'): ShopeeTask {
   const base = newTask()
@@ -27,6 +27,12 @@ export function validateTask(task: ShopeeTask, provider?: Provider): string[] {
   if (!Number.isInteger(task.max_items) || task.max_items < 1 || task.max_items > 500) errors.push('搜尋筆數必須是 1 至 500 的整數。')
   if (!Number.isInteger(task.max_pages) || task.max_pages < 1 || task.max_pages > 20) errors.push('搜尋頁數必須是 1 至 20 的整數。')
   if (task.cron && task.cron.trim().split(/\s+/).length !== 5) errors.push('Cron 必須包含五個欄位：分、時、日、月、星期。')
+  if (task.provider === 'browser_experiment') {
+    if (task.decision_mode !== 'ai') errors.push('實驗瀏覽快照保留 AI 分析，不支援關鍵字取代 AI。')
+    if (task.max_items > 5) errors.push('實驗瀏覽快照每次最多分析 5 筆。')
+    if (task.max_pages !== 1) errors.push('實驗瀏覽快照固定為 1 頁，不會自動翻頁。')
+    if (task.cron !== null) errors.push('實驗瀏覽快照只能手動重新分析，不支援排程。')
+  }
   return errors
 }
 export function sanitizeCapabilities(task: ShopeeTask, provider?: Provider): ShopeeTask {
@@ -58,4 +64,46 @@ export function parseImport(content: string): unknown[] {
   if (!Array.isArray(products) || !products.length) throw new Error('請提供非空的商品陣列，或包含 products 陣列的 JSON。')
   if (products.length > 500) throw new Error('每次最多匯入 500 筆商品。')
   return products
+}
+
+// A collector request contains public product URLs only, never login/session data.
+// Reject ambiguous URL syntax before URL() has a chance to normalize it.
+export function browserProductUrl(value: string): string | undefined {
+  const prefix = /^https:\/\/(?:www\.)?shopee\.tw(?::443)?(?=\/)/i
+  if (!prefix.test(value) || /[\s\\\u0000-\u001f\u007f]/.test(value)) return undefined
+  try {
+    const url = new URL(value)
+    if (url.username || url.password || url.port) return undefined
+    const rawPath = value.replace(prefix, '').split(/[?#]/)[0] ?? ''
+    if (/%(?:2f|5c|3f|23|2e)/i.test(rawPath)) return undefined
+    const path = decodeURIComponent(rawPath)
+    if (/[\u0000-\u001f\u007f]/.test(path) || path !== decodeURIComponent(url.pathname)) return undefined
+    const product = path.match(/^\/product\/([1-9]\d*)\/([1-9]\d*)\/?$/) ?? path.match(/^\/[^/\\?#\s]+-i\.([1-9]\d*)\.([1-9]\d*)\/?$/)
+    return product ? `https://shopee.tw/product/${product[1]}/${product[2]}` : undefined
+  } catch { return undefined }
+}
+
+export function buildBrowserRequest(keyword: string, urlLines: string, intervalSeconds: number, maxItems: number): BrowserRequest {
+  const trimmedKeyword = keyword.trim()
+  const urls = urlLines.split(/\r?\n/).map(value => value.trim()).filter(Boolean)
+  if (Boolean(trimmedKeyword) === Boolean(urls.length)) throw new Error('請擇一填寫搜尋關鍵字或商品網址清單，不能同時填寫。')
+  if (trimmedKeyword.length > 200 || /[\u0000-\u001f\u007f]/.test(trimmedKeyword)) throw new Error('搜尋關鍵字最多 200 字，且不能包含換行或控制字元。')
+  if (urls.length > 5) throw new Error('商品網址清單限 1 至 5 筆，一行一個網址。')
+  if (!Number.isInteger(intervalSeconds) || intervalSeconds < 60 || intervalSeconds > 300) throw new Error('瀏覽間隔必須是 60 至 300 秒的整數。')
+  if (!Number.isInteger(maxItems) || maxItems < 1 || maxItems > 5) throw new Error('最多收集筆數必須是 1 至 5 的整數。')
+  const normalized = urls.map((value, index) => {
+    const url = browserProductUrl(value)
+    if (!url) throw new Error(`第 ${index + 1} 行不是有效的臺灣蝦皮商品網址。請使用 HTTPS 商品連結；不接受短網址、搜尋頁或登入頁。`)
+    return url
+  })
+  if (new Set(normalized).size !== normalized.length) throw new Error('商品網址不可重複。')
+  return { keyword: trimmedKeyword || null, urls: normalized, interval_seconds: intervalSeconds, max_items: maxItems }
+}
+
+export function buildBrowserImport(content: string, rightsConfirmed: boolean, riskConfirmed: boolean): BrowserImportPayload {
+  if (!rightsConfirmed || !riskConfirmed) throw new Error('請分別確認資料使用權與實驗瀏覽風險後，才能匯入快照。')
+  const products = parseImport(content)
+  if (products.length > 5) throw new Error('實驗瀏覽快照每次最多匯入 5 筆商品。')
+  if (products.some(product => typeof product !== 'object' || product === null || Array.isArray(product))) throw new Error('每一筆快照商品都必須是 JSON 物件。')
+  return { products, rights_confirmed: true, risk_confirmed: true }
 }

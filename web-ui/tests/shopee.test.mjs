@@ -8,11 +8,11 @@ const source = readFileSync(new URL('../src/lib/shopee.ts', import.meta.url), 'u
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText
 const { newTask, sampleTask, validateTask, sanitizeCapabilities, formatPrice, formatDate, safeProductUrl, safeImageUrl, parseImport, scheduleLabel } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
 const provider = { id: 'mock', available: true, capabilities: {} }
-const task = () => ({ ...newTask(), task_name: '測試任務', keyword: 'RTX 5070 Ti' })
+const task = () => ({ ...newTask(), task_name: '測試任務', keyword: 'RTX 5070 Ti', description: '確認商品規格與風險。' })
 
-test('new tasks use safe mock and keyword defaults', () => {
+test('new tasks use safe mock source and retain AI by default', () => {
   assert.equal(newTask().provider, 'mock')
-  assert.equal(newTask().decision_mode, 'keyword')
+  assert.equal(newTask().decision_mode, 'ai')
   assert.equal(newTask().cron, null)
   assert.deepEqual(validateTask(task(), provider), [])
 })
@@ -37,6 +37,8 @@ test('sample tasks match requested presets without claiming live data', () => {
   assert.equal(sampleTask('rtx').cron, '*/30 * * * *')
   assert.equal(sampleTask('mac').max_price, null)
   assert.equal(sampleTask('mac').provider, 'mock')
+  assert.equal(sampleTask('mac').decision_mode, 'ai')
+  assert.equal(sampleTask('rtx').decision_mode, 'ai')
   assert.ok(sampleTask('mac').exclude_keywords.includes('空盒'))
   assert.equal(scheduleLabel(null), '僅手動執行')
 })

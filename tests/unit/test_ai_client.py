@@ -174,34 +174,23 @@ def test_call_ai_retries_without_temperature_when_gateway_rejects_it():
     assert "temperature" not in request_history[1]
 
 
-def test_call_ai_retries_when_response_content_is_empty():
+def test_call_ai_optionally_retries_one_empty_response():
     client = AIClient.__new__(AIClient)
-    client.settings = SimpleNamespace(
-        model_name="fake-model",
-        enable_response_format=False,
-    )
+    client.settings = SimpleNamespace(model_name="fake-model", enable_response_format=False, empty_response_retries=1)
     request_history = []
 
     async def fake_create(**kwargs):
         request_history.append(kwargs)
-        if len(request_history) < 4:
-            return SimpleNamespace(output_text="")
-        return SimpleNamespace(output_text='{"ok":true}')
+        return SimpleNamespace(output_text="" if len(request_history) == 1 else '{"ok":true}')
 
     client.client = _build_fake_client(fake_create)
-
-    response = asyncio.run(client._call_ai([{"role": "user", "content": "hi"}]))
-
-    assert response == '{"ok":true}'
-    assert len(request_history) == 4
+    assert asyncio.run(client._call_ai([{"role": "user", "content": "hi"}])) == '{"ok":true}'
+    assert len(request_history) == 2
 
 
-def test_call_ai_raises_after_all_empty_response_retries_are_exhausted():
+def test_call_ai_fails_fast_on_empty_response_by_default():
     client = AIClient.__new__(AIClient)
-    client.settings = SimpleNamespace(
-        model_name="fake-model",
-        enable_response_format=False,
-    )
+    client.settings = SimpleNamespace(model_name="fake-model", enable_response_format=False)
     request_history = []
 
     async def fake_create(**kwargs):
@@ -209,11 +198,9 @@ def test_call_ai_raises_after_all_empty_response_retries_are_exhausted():
         return SimpleNamespace(output_text="")
 
     client.client = _build_fake_client(fake_create)
-
     with pytest.raises(ValueError, match="AI回應內容為空"):
         asyncio.run(client._call_ai([{"role": "user", "content": "hi"}]))
-
-    assert len(request_history) == 4
+    assert len(request_history) == 1
 
 
 def test_close_closes_underlying_async_client_and_clears_reference():

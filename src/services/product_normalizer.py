@@ -1,11 +1,24 @@
 """Normalize explicitly supplied TWD data, without guessing private API units."""
+from datetime import datetime, timezone, timedelta
 from src.domain.models.shopee import Product, ShopeeTask, utc_now
 
 
 def normalize_product(raw: dict, source: str = 'import') -> Product:
     data = dict(raw)
     data['data_source'] = source
-    data['collected_at'] = utc_now()
+    if source == 'browser_experiment':
+        # Re-analyzing a snapshot must not make an old price look freshly fetched.
+        observed = data.get('collected_at')
+        if not isinstance(observed, str):
+            raise ValueError('實驗快照必須提供原始採集時間')
+        parsed = datetime.fromisoformat(observed)
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise ValueError('採集時間必須包含時區')
+        if parsed > datetime.now(timezone.utc) + timedelta(minutes=5):
+            raise ValueError('採集時間不可晚於目前時間')
+        data['collected_at'] = parsed.astimezone(timezone.utc).isoformat()
+    else:
+        data['collected_at'] = utc_now()
     data['data_quality'] = 'mock' if source == 'mock' else 'partial'
     if data.get('seller') is None:
         data['seller'] = {}

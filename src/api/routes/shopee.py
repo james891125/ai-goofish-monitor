@@ -92,6 +92,27 @@ async def import_products(payload: ImportRequest,request: Request):
     return {'imported':runtime(request).repository.import_products(normalized)}
 
 
+class BrowserImportRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    products: list[dict]=Field(min_length=1,max_length=5)
+    rights_confirmed: bool=False
+    risk_confirmed: bool=False
+
+
+@router.post('/browser-import')
+async def import_browser_snapshots(payload: BrowserImportRequest,request: Request):
+    if not payload.rights_confirmed or not payload.risk_confirmed:
+        raise HTTPException(422,'請分別確認資料使用權及實驗瀏覽的平台條款、帳號限制風險。')
+    try:
+        normalized=[normalize_product(row,'browser_experiment') for row in payload.products]
+        # The experimental collector has no image permission or seller-history access.
+        if any(product.images or product.images_allowed for product in normalized):
+            raise ValueError('Images are not supported in this experiment')
+    except (ValueError,TypeError):
+        raise HTTPException(422,'實驗快照格式錯誤：最多 5 件、明確新臺幣價格、含時區的原始採集時間，且不包含圖片。')
+    return {'imported':runtime(request).repository.import_browser_snapshots(normalized)}
+
+
 class SettingsUpdate(BaseModel):
     model_config=ConfigDict(extra='forbid')
     OPENAI_API_KEY: str | None=Field(default=None,max_length=1000)

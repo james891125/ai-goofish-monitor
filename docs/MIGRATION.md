@@ -45,11 +45,15 @@ APP_DATABASE_FILE=data/app.sqlite3
 |---|---|
 | `shopee_tasks` | 任務 JSON 與軟刪除時間 |
 | `shopee_imports` | 合法匯入的商品資料集 |
+| `shopee_browser_snapshots` | 人工確認後匯入的實驗瀏覽快照；不代表平台授權 |
+| `shopee_analysis_cache` | 每任務／來源／商品的最近一份有效分析及內容雜湊，沒有 API Key |
 | `shopee_products` | 每任務／來源／商品的最新資料、分析與首次／最近出現時間 |
 | `shopee_price_history` | 首次觀察與價格變更紀錄 |
 | `shopee_runs` | 執行開始、完成、數量與安全化錯誤訊息 |
 | `shopee_notifications` | 通知認領、送出或失敗／結果不明狀態 |
 | `shopee_locks` | 防止同一任務並行執行的期限鎖 |
+
+後續版本為 `shopee_runs` 新增 `ai_new_count`、`ai_reused_count`、`ai_skipped_count`，以查詢既有欄位後逐項 `ALTER TABLE ADD COLUMN`，預設為 0。重複啟動不重加欄位，也不清空先前任務、快照或歷史。舊版的 0 計數代表當時未記錄，不代表可追溯的實際帳單用量。
 
 驗收時以備份的舊表列數與抽樣內容比對，確認舊資料未變，再建立一個模擬任務。主應用不會啟動舊表中的閒魚排程。新 UI 刪除任務採軟刪除，歷史商品與執行紀錄保留。
 

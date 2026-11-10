@@ -15,6 +15,9 @@ from src.infrastructure.config.env_manager import env_manager
 from src.services.ai_request_compat import AIRequestCompatibility, create_ai_response_async
 from src.services.ai_analysis_validator import parse_validated_analysis
 from src.services.remote_image_urls import safe_public_https_url
+from src.services.ai_token_policy import (
+    DEFAULT_DESCRIPTION_CHARS, DEFAULT_MAX_IMAGES, DEFAULT_MAX_OUTPUT_TOKENS, project_product,
+)
 
 from src.services.ai_response_parser import (
     EmptyAIResponseError,
@@ -102,7 +105,8 @@ class AIClient:
 
             return AsyncOpenAI(
                 api_key=self.settings.api_key,
-                base_url=self.settings.base_url
+                base_url=self.settings.base_url,
+                max_retries=0,  # Do not silently repeat potentially billable requests.
             )
         except Exception as e:
             print(f"初始化 AI 用戶端失敗：{type(e).__name__}")
@@ -159,12 +163,16 @@ class AIClient:
 
     def _build_messages(self, product_data: Dict, image_paths: List[str], prompt_text: str, *, remote_image_urls: Optional[List[str]] = None) -> List[Dict]:
         """建立文字或多模態訊息，不下載遠端圖片。"""
-        product_json = json.dumps(product_data, ensure_ascii=False, indent=2)
+        settings = getattr(self, 'settings', None)
+        product_data = project_product(product_data,
+            getattr(settings, 'product_description_chars', DEFAULT_DESCRIPTION_CHARS))
+        product_json = json.dumps(product_data, ensure_ascii=False, separators=(',', ':'))
+        image_limit = getattr(settings, 'max_images', DEFAULT_MAX_IMAGES)
         image_data_urls: List[str] = [
-            validated for url in (remote_image_urls or [])[:8]
+            validated for url in (remote_image_urls or [])[:image_limit]
             if (validated := safe_public_https_url(url)) is not None
         ]
-        for path in image_paths:
+        for path in image_paths[:max(0, image_limit - len(image_data_urls))]:
             base64_img = self.encode_image(path)
             if base64_img:
                 image_data_urls.append(f"data:image/jpeg;base64,{base64_img}")
@@ -182,7 +190,7 @@ class AIClient:
         messages: List[Dict],
         *,
         temperature: float = 0.1,
-        max_output_tokens: int = 4000,
+        max_output_tokens: Optional[int] = None,
         enable_json_output: Optional[bool] = None,
     ) -> str:
         """Call an OpenAI-compatible endpoint with bounded capability fallbacks."""
@@ -190,9 +198,13 @@ class AIClient:
             self.settings.model_name,
             self.settings.enable_response_format if enable_json_output is None else enable_json_output,
         )
+        if max_output_tokens is None:
+            max_output_tokens = getattr(self.settings, 'max_output_tokens', DEFAULT_MAX_OUTPUT_TOKENS)
+        max_output_tokens = max(256, min(int(max_output_tokens), 4000))
         empty_responses = 0
-        # Four content attempts plus token, endpoint, JSON and temperature adaptation.
-        for _attempt in range(8):
+        empty_retries = min(max(getattr(self.settings, 'empty_response_retries', 0), 0), 1)
+        # Parameter rejections are bounded; generated empty responses are not retried by default.
+        for _attempt in range(6 + empty_retries):
             request_params = state.build(
                 messages, temperature=temperature, max_output_tokens=max_output_tokens,
             )
@@ -201,7 +213,7 @@ class AIClient:
                 return extract_ai_response_content(response)
             except EmptyAIResponseError:
                 empty_responses += 1
-                if empty_responses >= 4:
+                if empty_responses > empty_retries:
                     raise
             except Exception as exc:
                 if not state.adapt(exc):

@@ -18,6 +18,9 @@ class ShopeeRepository:
                 CREATE TABLE IF NOT EXISTS shopee_imports (
                     product_id TEXT PRIMARY KEY, payload TEXT NOT NULL, imported_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS shopee_browser_snapshots (
+                    product_id TEXT PRIMARY KEY, payload TEXT NOT NULL, imported_at TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS shopee_products (
                     task_id INTEGER NOT NULL, product_id TEXT NOT NULL, source TEXT NOT NULL,
                     payload TEXT NOT NULL, analysis TEXT, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
@@ -44,9 +47,18 @@ class ShopeeRepository:
                 CREATE TABLE IF NOT EXISTS shopee_locks (
                     task_id INTEGER PRIMARY KEY, expires_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS shopee_analysis_cache (
+                    task_id INTEGER NOT NULL, source TEXT NOT NULL, product_id TEXT NOT NULL,
+                    cache_key TEXT NOT NULL, analysis TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    PRIMARY KEY(task_id, source, product_id)
+                );
                 CREATE INDEX IF NOT EXISTS shopee_history_product ON shopee_price_history(task_id, source, product_id, id);
                 CREATE INDEX IF NOT EXISTS shopee_runs_task ON shopee_runs(task_id, id);
             ''')
+            run_columns = {row['name'] for row in conn.execute('PRAGMA table_info(shopee_runs)')}
+            for column in ('ai_new_count', 'ai_reused_count', 'ai_skipped_count'):
+                if column not in run_columns:
+                    conn.execute(f'ALTER TABLE shopee_runs ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0')
             conn.execute("INSERT OR IGNORE INTO app_metadata VALUES ('migration:shopee_tw_v1','done')")
             conn.commit()
 
@@ -92,6 +104,19 @@ class ShopeeRepository:
         with self.connection() as conn:
             return [json.loads(row['payload']) for row in conn.execute('SELECT payload FROM shopee_imports ORDER BY product_id')]
 
+    def import_browser_snapshots(self, products):
+        """Upsert user-confirmed snapshots; do not erase other snapshots or history."""
+        with self.connection() as conn:
+            for product in products:
+                conn.execute('INSERT INTO shopee_browser_snapshots VALUES (?,?,?) ON CONFLICT(product_id) DO UPDATE SET payload=excluded.payload,imported_at=excluded.imported_at',
+                             (product.product_id, product.model_dump_json(), utc_now()))
+            conn.commit()
+        return len({product.product_id for product in products})
+
+    def browser_snapshots(self):
+        with self.connection() as conn:
+            return [json.loads(row['payload']) for row in conn.execute('SELECT payload FROM shopee_browser_snapshots ORDER BY imported_at DESC, product_id')]
+
     def observe(self, task_id, product: Product, analysis=None):
         now, source, pid = utc_now(), product.data_source, product.product_id
         with self.connection() as conn:
@@ -116,6 +141,27 @@ class ShopeeRepository:
             conn.execute('UPDATE shopee_products SET analysis=? WHERE task_id=? AND source=? AND product_id=?', (json.dumps(analysis,ensure_ascii=False),task_id,product.data_source,product.product_id))
             conn.commit()
 
+    def get_cached_analysis(self, task_id, product, cache_key):
+        with self.connection() as conn:
+            row = conn.execute('SELECT analysis FROM shopee_analysis_cache WHERE task_id=? AND source=? AND product_id=? AND cache_key=?',
+                               (task_id, product.data_source, product.product_id, cache_key)).fetchone()
+            if not row:
+                return None
+            try:
+                value = json.loads(row['analysis'])
+            except (TypeError, ValueError):
+                return None
+            return value if isinstance(value, dict) else None
+
+    def save_cached_analysis(self, task_id, product, cache_key, analysis):
+        with self.connection() as conn:
+            conn.execute('''INSERT INTO shopee_analysis_cache VALUES (?,?,?,?,?,?)
+                ON CONFLICT(task_id,source,product_id) DO UPDATE SET cache_key=excluded.cache_key,
+                analysis=excluded.analysis,updated_at=excluded.updated_at''',
+                         (task_id, product.data_source, product.product_id, cache_key,
+                          json.dumps(analysis, ensure_ascii=False), utc_now()))
+            conn.commit()
+
     def products(self, task_id=None):
         query, args = 'SELECT * FROM shopee_products', ()
         if task_id is not None:
@@ -138,10 +184,11 @@ class ShopeeRepository:
             conn.commit()
             return cursor.lastrowid
 
-    def finish_run(self, run_id, *, status='completed', found=0, new_count=0, changed_count=0, notified_count=0, error_code=None, error_message=None):
+    def finish_run(self, run_id, *, status='completed', found=0, new_count=0, changed_count=0, notified_count=0,
+                   ai_new_count=0, ai_reused_count=0, ai_skipped_count=0, error_code=None, error_message=None):
         with self.connection() as conn:
-            conn.execute('UPDATE shopee_runs SET finished_at=?,status=?,found=?,new_count=?,changed_count=?,notified_count=?,error_code=?,error_message=? WHERE id=?',
-                         (utc_now(),status,found,new_count,changed_count,notified_count,error_code,error_message,run_id))
+            conn.execute('UPDATE shopee_runs SET finished_at=?,status=?,found=?,new_count=?,changed_count=?,notified_count=?,ai_new_count=?,ai_reused_count=?,ai_skipped_count=?,error_code=?,error_message=? WHERE id=?',
+                         (utc_now(),status,found,new_count,changed_count,notified_count,ai_new_count,ai_reused_count,ai_skipped_count,error_code,error_message,run_id))
             conn.commit()
 
     def runs(self, task_id=None):

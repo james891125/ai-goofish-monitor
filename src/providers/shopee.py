@@ -1,4 +1,8 @@
-"""Explicit offline sources and a fail-closed authorization boundary. No scraping."""
+"""Offline snapshots and a fail-closed official authorization boundary.
+
+The optional local browser experiment is separate from this server and never
+starts from a provider search or a scheduler job.
+"""
 from src.providers.base import ProductProvider, ProviderError, ProviderCapabilities
 from src.services.product_normalizer import normalize_product, filter_products
 
@@ -41,5 +45,23 @@ class ShopeeProvider(ProductProvider):
         raise ProviderError('authorization_required', '等待資料來源授權：尚未驗證可用的全站關鍵字搜尋權限。')
 
 
+class BrowserSnapshotProvider(ProductProvider):
+    id, name = 'browser_experiment', '實驗瀏覽快照（手動更新）'
+    authorization_status = 'experimental_unverified'
+    capabilities = ProviderCapabilities(True, True, False, False, False, False, False)
+
+    def __init__(self, repository):
+        self.repository = repository
+
+    def status(self):
+        return dict(super().status(), live_search=False, manual_only=True,
+                    warning='非官方授權來源。僅分析已匯入快照，不會重新瀏覽或自動搜尋蝦皮。')
+
+    async def search(self, task):
+        if task.cron or task.max_items > 5 or task.max_pages != 1:
+            raise ProviderError('browser_snapshot_limits', '實驗瀏覽快照僅供手動分析，每次最多 5 件，不支援排程。')
+        return filter_products([normalize_product(row, self.id) for row in self.repository.browser_snapshots()], task)
+
+
 def build_providers(repository):
-    return {provider.id: provider for provider in [MockProvider(), ImportProvider(repository), ShopeeProvider()]}
+    return {provider.id: provider for provider in [MockProvider(), ImportProvider(repository), ShopeeProvider(), BrowserSnapshotProvider(repository)]}

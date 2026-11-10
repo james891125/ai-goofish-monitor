@@ -78,6 +78,9 @@ def run():
                 page.keyboard.press('Escape')
                 expect(editor).not_to_be_visible()
                 page.get_by_role('button', name=re.compile('顯示卡監控範本')).click()
+                # This legacy-compatibility smoke has no external AI service.
+                # New production defaults remain AI; select the old mode explicitly.
+                page.get_by_role('dialog').get_by_label('判斷模式').select_option('keyword')
                 page.get_by_role('button', name='儲存任務', exact=True).click()
                 expect(page.get_by_role('row').filter(has_text='RTX 5070 Ti 二手監控')).to_be_visible()
                 page.get_by_role('button', name='執行', exact=True).click()

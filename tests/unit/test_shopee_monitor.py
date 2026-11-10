@@ -9,6 +9,7 @@ from src.providers.base import ProviderError
 from src.services.product_normalizer import normalize_product,filter_products
 from src.services.product_monitor import ProductMonitor
 from src.services.shopee_runtime import ShopeeRuntime
+from tests.unit.test_shopee_ai_analysis import ANALYSIS
 
 
 @pytest.fixture
@@ -156,7 +157,7 @@ def test_custom_prompt_supplements_required_output_schema(repo):
         def is_available(self): return True
         async def analyze(self,p,images,prompt,**kwargs):
             captured.append(prompt)
-            return {'is_recommended':False,'reason':'資訊不足','risk_tags':[]}
+            return dict(ANALYSIS)
         async def close(self): pass
     t=task(repo,decision_mode='ai',description='保固有效',custom_prompt='請注意風扇異音')
     result=asyncio.run(ProductMonitor(repo,ai_factory=Client).run(t))
@@ -171,7 +172,7 @@ def test_ai_image_permission_applies_to_text_and_multimodal_payload(repo,enabled
         def is_available(self): return True
         async def analyze(self,p,images,prompt,**kwargs):
             captured.append((p,kwargs['remote_image_urls']))
-            return {'is_recommended':False,'reason':'資訊不足','risk_tags':[]}
+            return dict(ANALYSIS)
         async def close(self): pass
     t=task(repo,provider='import',decision_mode='ai',description='測試',analyze_images=enabled)
     repo.import_products([product(images=['https://img.susercontent.com/test.jpg'],images_allowed=allowed)])

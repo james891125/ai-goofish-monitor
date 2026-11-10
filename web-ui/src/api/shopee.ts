@@ -21,7 +21,7 @@ export interface ShopeeTask {
   task_name: string
   enabled: boolean
   keyword: string
-  provider: string
+  provider: 'mock' | 'import' | 'shopee' | 'browser_experiment'
   decision_mode: 'keyword' | 'ai'
   description: string
   analyze_images: boolean
@@ -74,6 +74,9 @@ export interface Run {
   new_count: number
   changed_count: number
   notified_count: number
+  ai_new_count?: number
+  ai_reused_count?: number
+  ai_skipped_count?: number
   error_code?: string | null
   error_message?: string | null
 }
@@ -86,6 +89,17 @@ export interface Settings {
   discord_configured?: boolean
 }
 export interface PricePoint { price_twd: number; observed_at: string }
+export interface BrowserRequest {
+  keyword: string | null
+  urls: string[]
+  interval_seconds: number
+  max_items: number
+}
+export interface BrowserImportPayload {
+  products: unknown[]
+  rights_confirmed: true
+  risk_confirmed: true
+}
 
 function write<T>(url: string, method: string, payload?: unknown): Promise<T> {
   return http(url, { method, headers: { 'Content-Type': 'application/json' }, body: payload === undefined ? undefined : JSON.stringify(payload) })
@@ -103,6 +117,7 @@ export const shopeeApi = {
   runs: (taskId?: number): Promise<Run[]> => http('/api/shopee/runs', { params: { task_id: taskId } }),
   history: (id: string, taskId?: number, source?: string): Promise<PricePoint[]> => http(`/api/shopee/products/${encodeURIComponent(id)}/history`, { params: { task_id: taskId, source } }),
   importProducts: (products: unknown[]): Promise<{ imported: number }> => write('/api/shopee/import', 'POST', { products, rights_confirmed: true }),
+  importBrowserProducts: (payload: BrowserImportPayload): Promise<{ imported: number }> => write('/api/shopee/browser-import', 'POST', payload),
   settings: (): Promise<Settings> => http('/api/shopee/settings'),
   saveSettings: (settings: Settings): Promise<unknown> => write('/api/shopee/settings', 'PUT', settings),
   prompt: (): Promise<{ filename: string; content: string }> => http('/api/prompts/base_prompt.txt'),

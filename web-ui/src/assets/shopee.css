@@ -42,3 +42,7 @@ select, input:not([type=checkbox]):not([type=file]), textarea { border: 1px soli
 
 .search-field input:not([type=checkbox]):not([type=file]) { border: 0; padding: 0; min-height: 20px; background: transparent; font-size: 11px; width: 170px; }
 @media (max-width:640px) { .search-field input:not([type=checkbox]):not([type=file]) { width: 100%; } }
+
+.snapshot-task-notice { margin: 15px 0 0; }
+.snapshot-product-note { margin-top: 10px; color: #a17a39; }
+.run-details > .run-ai-summary { color: #72818f; }

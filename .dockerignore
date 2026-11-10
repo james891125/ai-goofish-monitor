@@ -20,6 +20,7 @@ dist
 **/*state*.json
 **/*cookie*
 **/*token*
+!src/services/ai_token_policy.py
 **/*.key
 **/*.pem
 **/*.sqlite*
@@ -34,6 +35,8 @@ logs
 jsonl
 price_history
 task_images*
+browser-request*.json
+browser-results*.json
 archive
 docs/*
 !docs/THIRD_PARTY_NOTICES.md

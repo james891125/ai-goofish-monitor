@@ -29,6 +29,10 @@
 
 ## Python 開發／測試依賴
 
+### 可選的本機瀏覽器實驗
+
+`requirements-browser.txt` 額外使用 Playwright，不包含於主伺服器的必要依賴。已核對本次環境的 `playwright` 1.65.0 metadata 為 `Apache-2.0`，附帶 LICENSE／NOTICE；`greenlet` 3.5.6 metadata 為 `MIT AND PSF-2.0`。選用安裝可能包含更多間接依賴，需保留各套件原文。Microsoft Edge、Google Chrome 或另外安裝的 Chromium 仍適用各自授權，本專案不重新散布它們，也不宣稱 MIT 授予瀏覽器或平台資料權利。
+
 | 套件 | 已檢查版本 | metadata 授權 |
 |---|---|---|
 | `pytest` | 9.2.0 | MIT |
