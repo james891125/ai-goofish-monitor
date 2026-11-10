@@ -86,7 +86,8 @@ class ItemAnalysisDispatcher:
             except Exception as exc:
                 print(f"   [卖家] 采集卖家 {job.seller_id} 信息失败: {exc}")
         merged = copy.deepcopy(seller_info or {})
-        merged["卖家芝麻信用"] = job.zhima_credit_text
+        if job.zhima_credit_text is not None:
+            merged["卖家芝麻信用"] = job.zhima_credit_text
         merged["卖家注册时长"] = job.registration_duration_text
         return merged
 

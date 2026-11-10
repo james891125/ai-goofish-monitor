@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Xianyu Login State Extractor",
+  "name": "Shopee Login State Extractor",
   "version": "1.1",
-  "description": "Extract login state and browser environment for Xianyu monitoring robot",
+  "description": "Extract login state and browser environment for Shopee monitoring robot",
   "permissions": [
     "activeTab",
     "cookies",
@@ -12,13 +12,14 @@
     "webRequest"
   ],
   "host_permissions": [
-    "*://*.goofish.com/*"
+    "*://shopee.tw/*",
+    "*://*.shopee.tw/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Extract Xianyu Login State"
+    "default_title": "Extract Shopee Login State"
   }
 }

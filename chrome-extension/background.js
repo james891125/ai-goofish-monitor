@@ -1,6 +1,6 @@
 // Service worker for capturing browser environment, headers, storage, and cookies
 
-const GOOFISH_HOST_PATTERN = "*://*.goofish.com/*";
+const SHOPEE_HOST_PATTERNS = ["*://shopee.tw/*", "*://*.shopee.tw/*"];
 const MAX_STORAGE_ENTRY_LENGTH = 4096; // bytes limit to drop oversized values
 
 function mapSameSiteValue(chromeSameSite) {
@@ -30,8 +30,8 @@ async function getActiveGoofishTab() {
   if (!tab || !tab.id || !tab.url) {
     throw new Error("未找到活动标签页");
   }
-  if (!tab.url.includes("goofish.com")) {
-    throw new Error("请先打开 goofish.com 页面");
+  if (!/^https:\/\/([^/]+\.)?shopee\.tw\//.test(tab.url)) {
+    throw new Error("請先打開 shopee.tw 頁面並登入");
   }
   return tab;
 }
@@ -215,7 +215,7 @@ async function captureHeaders(tabId) {
 
     chrome.webRequest.onBeforeSendHeaders.addListener(
       listener,
-      { urls: [GOOFISH_HOST_PATTERN], tabId },
+      { urls: SHOPEE_HOST_PATTERNS, tabId },
       extraInfo,
     );
 

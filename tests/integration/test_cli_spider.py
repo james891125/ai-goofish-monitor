@@ -11,7 +11,7 @@ def test_cli_runs_single_task_with_prompt(tmp_path, load_json_fixture, monkeypat
     async def placeholder_scrape(task_config, debug_limit):
         return 0
 
-    fake_scraper.scrape_xianyu = placeholder_scrape
+    fake_scraper.scrape_shopee = placeholder_scrape
     monkeypatch.setitem(sys.modules, "src.scraper", fake_scraper)
     sys.modules.pop("spider_v2", None)
 
@@ -42,13 +42,13 @@ def test_cli_runs_single_task_with_prompt(tmp_path, load_json_fixture, monkeypat
 
     called = []
 
-    async def fake_scrape_xianyu(task_config, debug_limit):
+    async def fake_scrape_shopee(task_config, debug_limit):
         called.append(task_config["task_name"])
         assert "{{CRITERIA_SECTION}}" not in task_config["ai_prompt_text"]
         assert "Criteria text for A7M4." in task_config["ai_prompt_text"]
         return 1
 
-    monkeypatch.setattr(spider_v2, "scrape_xianyu", fake_scrape_xianyu)
+    monkeypatch.setattr(spider_v2, "scrape_shopee", fake_scrape_shopee)
     monkeypatch.setattr(sys, "argv", ["spider_v2.py", "--config", str(config_path), "--task-name", "Sony A7M4"])
 
     asyncio.run(spider_v2.main())
@@ -62,7 +62,7 @@ def test_cli_runs_keyword_mode_without_prompt_files(tmp_path, load_json_fixture,
     async def placeholder_scrape(task_config, debug_limit):
         return 0
 
-    fake_scraper.scrape_xianyu = placeholder_scrape
+    fake_scraper.scrape_shopee = placeholder_scrape
     monkeypatch.setitem(sys.modules, "src.scraper", fake_scraper)
     sys.modules.pop("spider_v2", None)
 
@@ -83,11 +83,11 @@ def test_cli_runs_keyword_mode_without_prompt_files(tmp_path, load_json_fixture,
 
     captured = []
 
-    async def fake_scrape_xianyu(task_config, debug_limit):
+    async def fake_scrape_shopee(task_config, debug_limit):
         captured.append(task_config)
         return 1
 
-    monkeypatch.setattr(spider_v2, "scrape_xianyu", fake_scrape_xianyu)
+    monkeypatch.setattr(spider_v2, "scrape_shopee", fake_scrape_shopee)
     monkeypatch.setattr(sys, "argv", ["spider_v2.py", "--config", str(config_path), "--task-name", "Sony A7M4"])
 
     asyncio.run(spider_v2.main())

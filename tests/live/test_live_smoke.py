@@ -15,8 +15,8 @@ REQUEST_TIMEOUT_SECONDS = 60
 TASK_POLL_INTERVAL_SECONDS = 2
 FORBIDDEN_LOG_MARKERS = (
     "Login required",
-    "passport.goofish.com",
-    "FAIL_SYS_USER_VALIDATE",
+    "/buyer/login",
+    "蝦皮要求人機驗證",
     "AI客户端未初始化",
     "未找到可用的登录状态文件",
     "检测到登录失效/重定向",

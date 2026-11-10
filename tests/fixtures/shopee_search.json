@@ -1,0 +1,46 @@
+{
+  "error": null,
+  "nomore": false,
+  "total_count": 2,
+  "items": [
+    {
+      "itemid": 111,
+      "shopid": 222,
+      "item_basic": {
+        "itemid": 111,
+        "shopid": 222,
+        "name": "MacBook Air M1 8G/256G 二手",
+        "image": "tw-aaa",
+        "images": ["tw-aaa", "tw-bbb"],
+        "price": 1850000000,
+        "price_min": 1850000000,
+        "price_max": 1850000000,
+        "price_before_discount": 2000000000,
+        "discount": "8折",
+        "historical_sold": 12,
+        "stock": 3,
+        "liked_count": 45,
+        "ctime": 1700000000,
+        "shop_location": "台北市大安區",
+        "show_free_shipping": true,
+        "is_official_shop": false,
+        "shopee_verified": true,
+        "item_rating": {"rating_star": 4.876, "rating_count": [30, 0, 0, 1, 2, 27]}
+      }
+    },
+    {
+      "item_basic": {
+        "itemid": 333,
+        "shopid": 444,
+        "name": "MacBook Pro 14 多規格",
+        "image": "tw-ccc",
+        "price": 3000000000,
+        "price_min": 3000000000,
+        "price_max": 4550000000,
+        "shop_location": "高雄市",
+        "show_free_shipping": false
+      }
+    },
+    {"item_basic": {"name": "缺少 ID 的廣告位"}}
+  ]
+}

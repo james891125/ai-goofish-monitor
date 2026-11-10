@@ -42,7 +42,7 @@ class NotificationService:
         test_product = {
             "商品标题": "[测试通知] 闲鱼智能监控",
             "当前售价": "0",
-            "商品链接": "https://www.goofish.com/",
+            "商品链接": "https://shopee.tw/",
         }
         return await self.send_notification(
             test_product,

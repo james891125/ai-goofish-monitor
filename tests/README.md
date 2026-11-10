@@ -46,10 +46,9 @@ tests/
 ├── conftest.py              # 共享 fixtures（API/CLI/样例数据）
 ├── fixtures/                # 贴近真实的样例数据（搜索/用户/评价/任务配置）
 │   ├── config.sample.json
-│   ├── ratings.json
-│   ├── search_results.json
+│   ├── shopee_search.json
+│   ├── shopee_detail.json
 │   ├── state.sample.json
-│   ├── user_head.json
 │   └── user_items.json
 ├── integration/             # 关键链路集成测试（API/CLI/解析器）
 │   ├── test_api_tasks.py

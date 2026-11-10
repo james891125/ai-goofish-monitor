@@ -1,0 +1,356 @@
+"""
+蝦皮 (Shopee) 相關的 URL 組裝與 API 回應解析。
+
+這裡只放純函式：不碰瀏覽器、不發請求，方便單元測試。
+輸出欄位沿用原本管線使用的鍵名（商品标题 / 当前售价 / 商品链接 ...），
+讓 AI 分析、通知、結果儲存與前端都不需要改動。
+"""
+import os
+from datetime import datetime
+from typing import Any, Optional
+from urllib.parse import urlencode
+
+SHOPEE_BASE_URL = (
+    os.getenv("SHOPEE_BASE_URL", "https://shopee.tw").strip().rstrip("/")
+    or "https://shopee.tw"
+)
+
+SEARCH_API_FRAGMENT = "/api/v4/search/search_items"
+DETAIL_API_FRAGMENT = "/api/v4/pdp/get_pc"
+SEARCH_PAGE_SIZE = 60
+
+# 蝦皮 API 的金額是「實際金額 x 100000」的整數
+PRICE_SCALE = 100000
+
+LOGIN_URL_MARKERS = ("/buyer/login", "/account/login")
+VERIFY_URL_MARKERS = ("/verify/captcha", "/verify/traffic", "/verify/bot")
+# 被流量驗證攔下時 API 會回這個 error code
+RISK_ERROR_CODES = {90309999}
+
+def _image_host() -> str:
+    """shopee.tw -> down-tw.img.susercontent.com"""
+    region = SHOPEE_BASE_URL.rsplit(".", 1)[-1].lower()
+    if not region.isalpha() or len(region) != 2:
+        region = "tw"
+    return f"https://down-{region}.img.susercontent.com/file"
+
+
+def build_image_url(image_id: Any) -> str:
+    if not image_id:
+        return ""
+    text = str(image_id)
+    if text.startswith("http"):
+        return text
+    return f"{_image_host()}/{text}"
+
+
+def build_item_url(shop_id: Any, item_id: Any) -> str:
+    return f"{SHOPEE_BASE_URL}/product/{shop_id}/{item_id}"
+
+
+def build_search_url(
+    keyword: str,
+    *,
+    page: int = 0,
+    min_price: Optional[str] = None,
+    max_price: Optional[str] = None,
+    sort_by_latest: bool = False,
+) -> str:
+    """組出搜尋頁網址。page 從 0 起算。"""
+    params: dict[str, Any] = {"keyword": keyword, "page": max(0, int(page))}
+    if min_price not in (None, ""):
+        params["minPrice"] = str(min_price).strip()
+    if max_price not in (None, ""):
+        params["maxPrice"] = str(max_price).strip()
+    if sort_by_latest:
+        params["sortBy"] = "ctime"
+        params["order"] = "desc"
+    return f"{SHOPEE_BASE_URL}/search?{urlencode(params)}"
+
+
+def wants_latest_sort(new_publish_option: Optional[str]) -> bool:
+    """任務只要設了「新發布」相關選項，就改用最新上架排序。"""
+    value = (new_publish_option or "").strip()
+    return bool(value) and value != "__none__"
+
+
+def is_login_url(url: str) -> bool:
+    lowered = (url or "").lower()
+    return any(marker in lowered for marker in LOGIN_URL_MARKERS)
+
+
+def is_verify_url(url: str) -> bool:
+    lowered = (url or "").lower()
+    return any(marker in lowered for marker in VERIFY_URL_MARKERS)
+
+
+def is_search_response(response: Any) -> bool:
+    return SEARCH_API_FRAGMENT in getattr(response, "url", "")
+
+
+def is_detail_response(response: Any) -> bool:
+    return DETAIL_API_FRAGMENT in getattr(response, "url", "")
+
+
+def is_risk_blocked_payload(payload: Any) -> bool:
+    """API 回應是否代表被流量驗證 / 風控攔截。"""
+    if not isinstance(payload, dict):
+        return False
+    return payload.get("error") in RISK_ERROR_CODES
+
+
+def format_price(raw: Any) -> str:
+    """把 API 的整數金額轉成顯示字串，例如 129000000 -> "$1,290"。"""
+    if not isinstance(raw, (int, float)) or raw <= 0:
+        return "价格异常"
+    value = raw / PRICE_SCALE
+    if abs(value - round(value)) < 1e-9:
+        return f"${int(round(value)):,}"
+    return f"${value:,.2f}"
+
+
+def _format_price_range(low: Any, high: Any, single: Any) -> str:
+    if (
+        isinstance(low, (int, float))
+        and isinstance(high, (int, float))
+        and 0 < low < high
+    ):
+        return f"{format_price(low)} - {format_price(high)}"
+    return format_price(single if single else low)
+
+
+def _format_timestamp(ts: Any) -> str:
+    if not isinstance(ts, (int, float)) or ts <= 0:
+        return "未知时间"
+    return datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M")
+
+
+def format_join_duration(ctime: Any, now: Optional[datetime] = None) -> str:
+    """賣場建立時間 (unix 秒) -> 「加入蝦皮 X 年 Y 個月」。"""
+    if not isinstance(ctime, (int, float)) or ctime <= 0:
+        return "未知"
+    current = now or datetime.now()
+    days = (current - datetime.fromtimestamp(int(ctime))).days
+    if days < 30:
+        return "加入蝦皮不足一個月"
+    years, remainder = divmod(days, 365)
+    months = min(11, remainder // 30)
+    if years and months:
+        return f"加入蝦皮 {years} 年 {months} 個月"
+    if years:
+        return f"加入蝦皮 {years} 年"
+    return f"加入蝦皮 {months} 個月"
+
+
+def _build_tags(basic: dict) -> list[str]:
+    tags = []
+    if basic.get("show_free_shipping"):
+        tags.append("免運")
+    if basic.get("is_official_shop"):
+        tags.append("商城")
+    if basic.get("shopee_verified"):
+        tags.append("蝦皮優選")
+    if basic.get("is_preferred_plus_seller"):
+        tags.append("優選賣家+")
+    if basic.get("is_adult"):
+        tags.append("18+")
+    discount = basic.get("discount")
+    if discount:
+        tags.append(f"折扣 {discount}")
+    return tags
+
+
+def parse_search_items(payload: Any) -> list[dict]:
+    """解析 search_items API，回傳商品基礎資訊列表。"""
+    if not isinstance(payload, dict):
+        return []
+    results = []
+    for entry in payload.get("items") or []:
+        if not isinstance(entry, dict):
+            continue
+        basic = entry.get("item_basic") or entry
+        item_id = basic.get("itemid") or entry.get("itemid")
+        shop_id = basic.get("shopid") or entry.get("shopid")
+        if not item_id or not shop_id:
+            continue
+
+        images = [build_image_url(i) for i in (basic.get("images") or []) if i]
+        main_image = build_image_url(basic.get("image")) or (images[0] if images else "")
+        if main_image and not images:
+            images = [main_image]
+
+        rating = basic.get("item_rating") or {}
+        rating_counts = rating.get("rating_count") or []
+        before_discount = basic.get("price_before_discount")
+
+        results.append(
+            {
+                "商品标题": basic.get("name") or "未知标题",
+                "当前售价": _format_price_range(
+                    basic.get("price_min"), basic.get("price_max"), basic.get("price")
+                ),
+                "商品原价": format_price(before_discount) if before_discount else "暂无",
+                "“想要”人数": basic.get("liked_count", 0),
+                "已售数量": basic.get("historical_sold", basic.get("sold", 0)),
+                "库存": basic.get("stock", "未知"),
+                "商品评分": round(float(rating.get("rating_star") or 0), 2),
+                "评价数量": rating_counts[0] if rating_counts else 0,
+                "商品标签": _build_tags(basic),
+                "发货地区": basic.get("shop_location") or "地区未知",
+                "卖家昵称": basic.get("shop_name") or f"shop_{shop_id}",
+                "商品链接": build_item_url(shop_id, item_id),
+                "发布时间": _format_timestamp(basic.get("ctime")),
+                "商品ID": str(item_id),
+                "卖家ID": str(shop_id),
+                "商品主图链接": main_image,
+                "商品图片列表": images,
+            }
+        )
+    return results
+
+
+def _first(*values, default=None):
+    for value in values:
+        if value not in (None, "", [], {}):
+            return value
+    return default
+
+
+def _parse_attributes(item: dict) -> dict:
+    attributes = {}
+    for attr in item.get("attributes") or []:
+        if isinstance(attr, dict) and attr.get("name") and attr.get("value"):
+            attributes[str(attr["name"])] = str(attr["value"])
+    return attributes
+
+
+def _parse_variations(item: dict) -> list[dict]:
+    variations = []
+    for model in item.get("models") or []:
+        if not isinstance(model, dict):
+            continue
+        variations.append(
+            {
+                "规格": model.get("name") or "",
+                "价格": format_price(model.get("price")),
+                "库存": _first(model.get("stock"), model.get("normal_stock"), default=0),
+            }
+        )
+    return variations
+
+
+def parse_item_detail(payload: Any) -> dict:
+    """解析商品詳情 API (pdp/get_pc)，回傳要合併進商品資訊的欄位。"""
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data, dict):
+        return {}
+    item = data.get("item") or {}
+    review = data.get("product_review") or {}
+    price_block = (data.get("product_price") or {}).get("price") or {}
+
+    detail: dict[str, Any] = {}
+    title = _first(item.get("title"), item.get("name"))
+    if title:
+        detail["商品标题"] = title
+    description = _first(item.get("description"), data.get("description"))
+    if description:
+        detail["商品描述"] = str(description).strip()
+
+    image_ids = _first(
+        (data.get("product_images") or {}).get("images"), item.get("images"), default=[]
+    )
+    images = [build_image_url(i) for i in image_ids if i]
+    if images:
+        detail["商品图片列表"] = images
+        detail["商品主图链接"] = images[0]
+
+    single_price = _first(price_block.get("single_value"), item.get("price"))
+    if isinstance(single_price, (int, float)) and single_price > 0:
+        detail["当前售价"] = _format_price_range(
+            _first(price_block.get("range_min"), item.get("price_min")),
+            _first(price_block.get("range_max"), item.get("price_max")),
+            single_price,
+        )
+
+    sold = _first(review.get("historical_sold"), item.get("historical_sold"))
+    if sold is not None:
+        detail["已售数量"] = sold
+    liked = _first(review.get("liked_count"), item.get("liked_count"))
+    if liked is not None:
+        detail["“想要”人数"] = liked
+    rating_star = _first(
+        review.get("rating_star"), (item.get("item_rating") or {}).get("rating_star")
+    )
+    if rating_star is not None:
+        detail["商品评分"] = round(float(rating_star), 2)
+    total_rating = _first(review.get("total_rating_count"), review.get("cmt_count"))
+    if total_rating is not None:
+        detail["评价数量"] = total_rating
+    stock = _first(item.get("stock"), item.get("normal_stock"))
+    if stock is not None:
+        detail["库存"] = stock
+    if item.get("brand"):
+        detail["品牌"] = item["brand"]
+    condition = item.get("condition")
+    if condition in (1, 2):
+        detail["商品状况"] = "全新" if condition == 1 else "二手"
+
+    attributes = _parse_attributes(item)
+    if attributes:
+        detail["商品属性"] = attributes
+    variations = _parse_variations(item)
+    if variations:
+        detail["规格列表"] = variations
+    return detail
+
+
+def parse_shop_info(payload: Any) -> dict:
+    """從商品詳情 API 取出賣場資訊。"""
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(data, dict):
+        return {}
+    shop = _first(data.get("shop_detailed"), data.get("shop"), default={})
+    if not isinstance(shop, dict) or not shop:
+        return {}
+    account = shop.get("account") or {}
+    info = {
+        "卖家ID": str(_first(shop.get("shopid"), shop.get("shop_id"), default="")),
+        "卖家昵称": _first(shop.get("name"), account.get("username"), default="未知賣場"),
+        "卖家账号": account.get("username") or "",
+        "卖场评分": round(float(shop.get("rating_star") or 0), 2),
+        "卖场好评数": shop.get("rating_good", "未知"),
+        "卖场中评数": shop.get("rating_normal", "未知"),
+        "卖场差评数": shop.get("rating_bad", "未知"),
+        "粉丝数": shop.get("follower_count", "未知"),
+        "卖家在售商品数": shop.get("item_count", "未知"),
+        "聊天回应率": (
+            f"{shop['response_rate']}%" if shop.get("response_rate") is not None else "未知"
+        ),
+        "卖场所在地": _first(shop.get("shop_location"), shop.get("place"), default="未知"),
+        "是否商城卖家": bool(shop.get("is_official_shop")),
+        "是否虾皮优选": bool(shop.get("is_shopee_verified")),
+        "卖家注册时长": format_join_duration(shop.get("ctime")),
+    }
+    return info
+
+
+def matches_region(item: dict, region_filter: str) -> bool:
+    """region 以「/」分段，任一段出現在出貨地即視為符合。"""
+    parts = [p.strip() for p in (region_filter or "").split("/") if p.strip()]
+    if not parts:
+        return True
+    location = str(item.get("发货地区") or "")
+    return any(part in location for part in parts)
+
+
+def filter_search_items(
+    items: list[dict], *, free_shipping: bool = False, region_filter: str = ""
+) -> list[dict]:
+    filtered = []
+    for item in items:
+        if free_shipping and "免運" not in (item.get("商品标签") or []):
+            continue
+        if not matches_region(item, region_filter):
+            continue
+        filtered.append(item)
+    return filtered

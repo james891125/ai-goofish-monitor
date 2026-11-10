@@ -39,7 +39,10 @@ def parse_price_value(value: Any) -> Optional[float]:
     if isinstance(value, (int, float)):
         return round(float(value), 2)
 
-    text = str(value).strip().replace("¥", "").replace(",", "")
+    text = str(value).strip()
+    # 蝦皮多規格商品會顯示「$100 - $200」，以最低價為準
+    text = text.split(" - ", 1)[0]
+    text = text.replace("NT$", "").replace("$", "").replace("¥", "").replace(",", "").strip()
     if not text or text in {"价格异常", "暂无", "-", "N/A"}:
         return None
     if text.endswith("万"):

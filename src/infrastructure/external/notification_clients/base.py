@@ -58,6 +58,9 @@ class NotificationClient(ABC):
 
         if self._pcurl_to_mobile and desktop_link and desktop_link != "#":
             mobile_link = convert_goofish_link(desktop_link)
+            # 蝦皮連結在手機與電腦上相同，不需要重複列出
+            if mobile_link == desktop_link:
+                mobile_link = None
 
         content_lines = [
             f"价格: {price}",

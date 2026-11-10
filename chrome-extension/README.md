@@ -1,6 +1,6 @@
-# Xianyu Login State Extractor Chrome Extension
+# Shopee Login State Extractor Chrome Extension
 
-This Chrome extension helps extract complete login state information from Xianyu (Goofish) for use with the monitoring robot. It also records browser environment hints and request headers to better mimic a real session.
+This Chrome extension helps extract complete login state information from Shopee (shopee.tw) for use with the monitoring robot. It also records browser environment hints and request headers to better mimic a real session.
 
 ## Installation
 
@@ -11,7 +11,7 @@ This Chrome extension helps extract complete login state information from Xianyu
 
 ## Usage
 
-1. Navigate to [https://www.goofish.com](https://www.goofish.com)
+1. Navigate to [https://shopee.tw](https://shopee.tw)
 2. Log in to your account
 3. Click the extension icon in the toolbar
 4. Click "Extract Login State" (collects cookies + environment + headers，自动过滤无用/超大字段)
@@ -29,4 +29,4 @@ This Chrome extension helps extract complete login state information from Xianyu
 
 ## How It Works
 
-The extension uses the `chrome.cookies` API to access all cookies for the `.goofish.com` domain, including those with the HttpOnly flag set. This bypasses the normal JavaScript security restrictions that prevent access to these cookies.
+The extension uses the `chrome.cookies` API to access all cookies for the `shopee.tw` domain, including those with the HttpOnly flag set. This bypasses the normal JavaScript security restrictions that prevent access to these cookies.

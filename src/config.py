@@ -18,10 +18,6 @@ os.makedirs(IMAGE_SAVE_DIR, exist_ok=True)
 # 任务隔离的临时图片目录前缀
 TASK_IMAGE_DIR_PREFIX = "task_images_"
 
-# --- API URL Patterns ---
-API_URL_PATTERN = "h5api.m.goofish.com/h5/mtop.taobao.idlemtopsearch.pc.search"
-DETAIL_API_URL_PATTERN = "h5api.m.goofish.com/h5/mtop.taobao.idle.pc.detail"
-
 # --- Environment Variables ---
 API_KEY = os.getenv("OPENAI_API_KEY")
 BASE_URL = os.getenv("OPENAI_BASE_URL")
@@ -53,7 +49,7 @@ ENABLE_RESPONSE_FORMAT = os.getenv("ENABLE_RESPONSE_FORMAT", "true").lower() == 
 IMAGE_DOWNLOAD_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0',
     'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
     'Connection': 'keep-alive',
     'Upgrade-Insecure-Requests': '1',
 }

@@ -1,0 +1,36 @@
+{
+  "error": null,
+  "data": {
+    "item": {
+      "item_id": 111,
+      "shop_id": 222,
+      "title": "MacBook Air M1 8G/256G 二手 電池健康 92%",
+      "description": "  自用機，無維修紀錄，附原廠充電器。 ",
+      "price": 1850000000,
+      "stock": 2,
+      "brand": "Apple",
+      "condition": 2,
+      "attributes": [{"name": "保固", "value": "無"}, {"name": "", "value": "x"}],
+      "models": [{"name": "太空灰", "price": 1850000000, "stock": 2}]
+    },
+    "product_images": {"images": ["tw-aaa", "tw-bbb", "tw-ddd"]},
+    "product_price": {"price": {"single_value": 1850000000, "range_min": 1850000000, "range_max": 1850000000}},
+    "product_review": {"rating_star": 4.9, "total_rating_count": 31, "historical_sold": 13, "liked_count": 46},
+    "shop_detailed": {
+      "shopid": 222,
+      "name": "阿明的3C小舖",
+      "account": {"username": "aming3c"},
+      "rating_star": 4.95,
+      "rating_good": 800,
+      "rating_normal": 5,
+      "rating_bad": 1,
+      "follower_count": 1234,
+      "item_count": 56,
+      "response_rate": 98,
+      "shop_location": "台北市",
+      "is_official_shop": false,
+      "is_shopee_verified": true,
+      "ctime": 1600000000
+    }
+  }
+}

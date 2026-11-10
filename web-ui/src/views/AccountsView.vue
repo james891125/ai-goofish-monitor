@@ -141,7 +141,7 @@ onMounted(fetchAccounts)
             {{ t('accounts.cookieGuide.step1Prefix') }}
             <a
               class="text-blue-600 hover:underline"
-              href="https://chromewebstore.google.com/detail/xianyu-login-state-extrac/eidlpfjiodpigmfcahkmlenhppfklcoa"
+              href="https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked"
               target="_blank"
               rel="noopener noreferrer"
             >{{ t('accounts.cookieGuide.extension') }}</a>
@@ -150,7 +150,7 @@ onMounted(fetchAccounts)
             {{ t('accounts.cookieGuide.step2Prefix') }}
             <a
               class="text-blue-600 hover:underline"
-              href="https://www.goofish.com"
+              href="https://shopee.tw"
               target="_blank"
               rel="noopener noreferrer"
             >{{ t('accounts.cookieGuide.website') }}</a>

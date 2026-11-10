@@ -10,7 +10,7 @@ from src.infrastructure.external.ai_client import AIClient
 
 # The meta-prompt to instruct the AI
 META_PROMPT_TEMPLATE = """
-你是一位世界级的AI提示词工程大师。你的任务是根据用户提供的【购买需求】，模仿一个【参考范例】，为闲鱼监控机器人的AI分析模块（代号 EagleEye）生成一份全新的【分析标准】文本。
+你是一位世界级的AI提示词工程大师。你的任务是根据用户提供的【购买需求】，模仿一个【参考范例】，为蝦皮(Shopee)商品监控机器人的AI分析模块（代号 EagleEye）生成一份全新的【分析标准】文本。
 
 你的输出必须严格遵循【参考范例】的结构、语气和核心原则，但内容要完全针对用户的【购买需求】进行定制。最终生成的文本将作为AI分析模块的思考指南。
 

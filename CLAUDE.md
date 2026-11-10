@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-基于 Playwright + AI 的闲鱼智能监控机器人。FastAPI 后端 + Vue 3 前端，支持多任务并发监控、多模态 AI 商品分析、多渠道通知推送。
+基于 Playwright + AI 的蝦皮 (Shopee) 智能监控机器人（由闲鱼版本改造而来）。FastAPI 后端 + Vue 3 前端，支持多任务并发监控、多模态 AI 商品分析、多渠道通知推送。
 
 ## 核心架构
 
@@ -21,7 +21,8 @@ API层 (src/api/routes/)
 关键入口：
 - `src/app.py` - FastAPI 应用主入口
 - `spider_v2.py` - 爬虫 CLI 入口
-- `src/scraper.py` - Playwright 爬虫核心逻辑
+- `src/scraper.py` - Playwright 爬虫核心逻辑（`scrape_shopee`）
+- `src/shopee.py` - 蝦皮 URL 组装与 API 响应解析（纯函数）
 
 服务层：
 - `TaskService` - 任务 CRUD
@@ -78,7 +79,7 @@ pytest tests/unit/test_utils.py::test_safe_get  # 运行单个测试函数
 环境变量 (`.env`)：
 - AI 模型：`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL_NAME`
 - 通知：`NTFY_TOPIC_URL`, `BARK_URL`, `WX_BOT_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-- 爬虫：`RUN_HEADLESS`, `LOGIN_IS_EDGE`
+- 爬虫：`RUN_HEADLESS`, `LOGIN_IS_EDGE`, `SHOPEE_BASE_URL`（默认 `https://shopee.tw`）
 - Web 认证：`WEB_USERNAME`, `WEB_PASSWORD`
 - 端口：`SERVER_PORT`
 
@@ -89,7 +90,7 @@ pytest tests/unit/test_utils.py::test_safe_get  # 运行单个测试函数
 1. Web UI / config.json 创建任务
 2. SchedulerService 按 cron 触发或手动启动
 3. ProcessService 启动 spider_v2.py 子进程
-4. scraper.py 使用 Playwright 抓取商品
+4. scraper.py 使用 Playwright 打开蝦皮搜索页/商品页，拦截页面自身的 `search_items` / `pdp/get_pc` API 响应
 5. AIAnalysisService 调用多模态模型分析
 6. NotificationService 推送符合条件的商品
 7. 结果存储：`jsonl/`（数据）、`images/`（图片）、`logs/`（日志）

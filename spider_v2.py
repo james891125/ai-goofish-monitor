@@ -9,12 +9,12 @@ import re
 
 from src.config import STATE_FILE
 from src.infrastructure.persistence.sqlite_task_repository import SqliteTaskRepository
-from src.scraper import scrape_xianyu
+from src.scraper import scrape_shopee
 
 
 async def main():
     parser = argparse.ArgumentParser(
-        description="闲鱼商品监控脚本，支持多任务配置和实时AI分析。",
+        description="蝦皮商品監控腳本，支持多任务配置和实时AI分析。",
         epilog="""
 使用示例:
   # 运行 config.json 中定义的所有任务
@@ -189,7 +189,7 @@ async def main():
     tasks = []
     for task_conf in active_task_configs:
         print(f"-> 任务 '{task_conf['task_name']}' 已加入执行队列。")
-        tasks.append(asyncio.create_task(scrape_xianyu(task_config=task_conf, debug_limit=args.debug_limit)))
+        tasks.append(asyncio.create_task(scrape_shopee(task_config=task_conf, debug_limit=args.debug_limit)))
 
     async def _shutdown_watcher():
         await stop_event.wait()
