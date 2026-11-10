@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>蝦皮商品清單</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1d2330; --muted: #667085; --line: #e3e6ec;
+    --accent: #ee4d2d; --accent-text: #ffffff; --ok: #138a4a; --warn: #b45309; --bad: #c0262d;
+    --code: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14161a; --card: #1d2026; --text: #eceef2; --muted: #9aa3b2; --line: #2d323b;
+            --accent: #ff6a4d; --accent-text: #1a0d09; --ok: #3ecf7f; --warn: #f0a24b; --bad: #ff7b80; --code: #14161a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.6 "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 0 0 4px; }
+  input[type=text], input[type=number], input[type=password], select, textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--card); color: var(--text); font: inherit; }
+  textarea { resize: vertical; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  .check { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--text); margin: 0; }
+  button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--card); color: var(--text); cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; border: 1px solid var(--line); }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  pre { background: var(--code); border-radius: 8px; padding: 12px; max-height: 240px; overflow: auto;
+        font: 13px/1.5 ui-monospace, Consolas, monospace; margin: 12px 0 0; white-space: pre-wrap; }
+  .tablewrap { overflow: auto; max-height: 460px; border: 1px solid var(--line); border-radius: 8px; margin-top: 12px; }
+  table { border-collapse: collapse; width: max-content; min-width: 100%; font-size: 13px; }
+  th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; max-width: 380px;
+           overflow: hidden; text-overflow: ellipsis; }
+  th { position: sticky; top: 0; background: var(--card); }
+  details summary { cursor: pointer; font-weight: 600; }
+  .provider { padding: 4px 12px; font-size: 13px; }
+  .provider.on { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>蝦皮商品清單</h1>
+  <p class="sub">輸入關鍵字，整理成 CSV：品名、狀態、容量、保固、價格⋯⋯只在你的電腦上執行。</p>
+
+  <section>
+    <h2>1. 登入狀態 <span id="loginPill" class="pill">檢查中…</span></h2>
+    <details id="loginBox">
+      <summary>貼上蝦皮 Cookie</summary>
+      <p class="hint">用 chrome-extension 在已登入的 shopee.tw 頁面按「提取登入狀態」，複製後貼在這裡。資料只存在這台電腦的 state/ 資料夾。</p>
+      <textarea id="cookie" rows="5" placeholder="貼上登入狀態 JSON…"></textarea>
+      <div class="row"><button id="saveLogin">儲存登入狀態</button><span id="loginMsg" class="hint"></span></div>
+    </details>
+  </section>
+
+  <section>
+    <h2>2. 搜尋</h2>
+    <label for="keywords">關鍵字（一行一個）</label>
+    <textarea id="keywords" rows="3" placeholder="mac mini m4"></textarea>
+    <div class="grid" style="margin-top:12px">
+      <div><label for="pages">每個關鍵字看幾頁（一頁約 60 件）</label><input id="pages" type="number" min="1" max="10" value="3"></div>
+      <div><label for="minPrice">最低價</label><input id="minPrice" type="number" min="0" placeholder="不限"></div>
+      <div><label for="maxPrice">最高價</label><input id="maxPrice" type="number" min="0" placeholder="不限"></div>
+      <div><label for="region">出貨地包含（選填）</label><input id="region" type="text" placeholder="例如 台北市"></div>
+      <div><label for="detail">補抓商品頁（取得描述）</label>
+        <select id="detail">
+          <option value="auto" selected>標題資訊不足才補（預設）</option>
+          <option value="off">只看標題（最快）</option>
+          <option value="all">每件都補（最完整、最慢）</option>
+        </select></div>
+      <div><label for="ai">AI 整理</label>
+        <select id="ai">
+          <option value="off" selected>不使用（只用規則）</option>
+          <option value="on">規則抓不到的才讓 AI 補</option>
+          <option value="compare">規則與 AI 並排比較</option>
+        </select></div>
+    </div>
+    <div class="row">
+      <label class="check"><input id="latest" type="checkbox"> 依最新上架排序</label>
+      <label class="check"><input id="freeShip" type="checkbox"> 只留免運</label>
+      <label class="check"><input id="titleMatch" type="checkbox" checked> 排除標題沒包含關鍵字的商品</label>
+    </div>
+    <div class="row">
+      <button id="run" class="primary">開始搜尋</button>
+      <button id="stop" disabled>停止</button>
+      <span id="runState" class="hint"></span>
+    </div>
+    <p class="hint">瀏覽器視窗會自動開啟。如果蝦皮要求驗證，請在那個視窗完成，程式會自動繼續。</p>
+    <pre id="log" hidden></pre>
+  </section>
+
+  <section id="resultBox" hidden>
+    <h2>3. 結果 <span id="count" class="pill"></span></h2>
+    <div id="summary" class="hint" style="white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace"></div>
+    <div class="row">
+      <button id="download" class="primary">下載 CSV</button>
+      <button id="sendWebhook">傳送到 Webhook</button>
+      <span id="webhookMsg" class="hint"></span>
+    </div>
+    <div class="tablewrap"><table id="table"></table></div>
+  </section>
+
+  <section>
+    <details id="settingsBox">
+      <summary>設定（AI、Webhook、瀏覽器）</summary>
+      <div style="margin-top:12px">
+        <label>AI 供應商（只有選用 AI 時才需要）</label>
+        <div id="providers" class="row" style="margin-top:0"></div>
+        <div class="grid" style="margin-top:12px">
+          <div><label for="baseUrl">API 位址</label><input id="baseUrl" type="text"></div>
+          <div><label for="model">模型</label><input id="model" type="text"></div>
+          <div><label for="apiKey">API Key</label><input id="apiKey" type="password" autocomplete="off"><p class="hint" id="keyHint"></p></div>
+        </div>
+        <div class="grid" style="margin-top:12px">
+          <div><label for="webhook">Webhook 網址（Discord 或可接收檔案的 Webhook）</label>
+            <input id="webhook" type="password" autocomplete="off"><p class="hint" id="webhookHint"></p></div>
+        </div>
+        <div class="row"><label class="check"><input id="headless" type="checkbox"> 隱藏瀏覽器視窗（遇到驗證時無法手動處理，不建議）</label></div>
+        <div class="row"><button id="saveSettings">儲存設定</button><span id="settingsMsg" class="hint"></span></div>
+      </div>
+    </details>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let providers = {};
+let polling = null;
+
+async function api(path, body) {
+  const options = body === undefined ? {} : {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  };
+  const res = await fetch(path, options);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function renderLogin(login) {
+  const pill = $('loginPill');
+  if (!login.saved) { pill.textContent = '尚未設定'; pill.className = 'pill warn'; $('loginBox').open = true; return; }
+  if (login.invalid) { pill.textContent = '檔案損毀'; pill.className = 'pill bad'; return; }
+  if (login.expired) { pill.textContent = '已過期'; pill.className = 'pill bad'; $('loginBox').open = true; return; }
+  if (!login.logged_in) { pill.textContent = '沒有偵測到登入'; pill.className = 'pill warn'; $('loginBox').open = true; return; }
+  pill.textContent = '已登入' + (login.shopee_user_id ? '（ID ' + login.shopee_user_id + '）' : '');
+  pill.className = 'pill ok';
+}
+
+function renderSettings(s) {
+  providers = s.providers;
+  $('baseUrl').value = s.base_url; $('model').value = s.model;
+  $('keyHint').textContent = s.has_key ? '已設定（留空代表沿用）' : '尚未設定';
+  $('webhookHint').textContent = s.webhook_set ? '已設定（留空代表沿用）' : '尚未設定';
+  $('headless').checked = s.headless;
+  const box = $('providers'); box.innerHTML = '';
+  for (const [key, p] of Object.entries(providers)) {
+    const b = document.createElement('button');
+    b.className = 'provider' + (p.base_url === s.base_url ? ' on' : '');
+    b.textContent = p.label;
+    b.onclick = () => { $('baseUrl').value = p.base_url; $('model').value = p.model; };
+    box.appendChild(b);
+  }
+}
+
+function renderJob(job) {
+  const running = job.state === 'running';
+  $('run').disabled = running; $('stop').disabled = !running;
+  const log = $('log'); log.hidden = job.log.length === 0;
+  log.textContent = job.log.join('\n'); log.scrollTop = log.scrollHeight;
+  $('runState').textContent = running ? '執行中…' : (job.state === 'error' ? '失敗：' + job.error : '');
+  $('runState').className = 'hint' + (job.state === 'error' ? ' bad' : '');
+  if (job.state === 'done') {
+    $('resultBox').hidden = false;
+    $('count').textContent = job.count + ' 件';
+    $('summary').textContent = job.summary.join('\n');
+    const table = $('table'); table.innerHTML = '';
+    const head = table.createTHead().insertRow();
+    for (const c of job.columns) { const th = document.createElement('th'); th.textContent = c; head.appendChild(th); }
+    const body = table.createTBody();
+    for (const row of job.rows) {
+      const tr = body.insertRow();
+      for (const c of job.columns) {
+        const td = tr.insertCell(); const v = row[c];
+        if (c === '商品連結' && v) { const a = document.createElement('a'); a.href = v; a.target = '_blank'; a.rel = 'noopener'; a.textContent = '開啟'; td.appendChild(a); }
+        else { td.textContent = v ?? ''; td.title = v ?? ''; }
+      }
+    }
+    if (job.count > job.rows.length) $('summary').textContent += '\n（畫面只顯示前 ' + job.rows.length + ' 件，完整內容請下載 CSV）';
+  }
+  if (!running && polling) { clearInterval(polling); polling = null; }
+}
+
+async function poll() { try { renderJob(await api('/api/job')); } catch (e) { /* 伺服器關閉時忽略 */ } }
+function startPolling() { if (!polling) polling = setInterval(poll, 1000); poll(); }
+
+$('saveLogin').onclick = async () => {
+  try { const r = await api('/api/login', { content: $('cookie').value }); renderLogin(r.login); $('cookie').value = ''; $('loginMsg').textContent = '已儲存'; $('loginMsg').className = 'hint ok'; }
+  catch (e) { $('loginMsg').textContent = e.message; $('loginMsg').className = 'hint bad'; }
+};
+$('run').onclick = async () => {
+  $('resultBox').hidden = true;
+  try {
+    await api('/api/run', {
+      keywords: $('keywords').value, pages: Number($('pages').value) || 3,
+      min_price: $('minPrice').value, max_price: $('maxPrice').value, region: $('region').value,
+      detail: $('detail').value, ai: $('ai').value, latest: $('latest').checked,
+      free_shipping: $('freeShip').checked, title_match: $('titleMatch').checked,
+    });
+    startPolling();
+  } catch (e) { $('runState').textContent = e.message; $('runState').className = 'hint bad'; }
+};
+$('stop').onclick = async () => { await api('/api/stop', {}); $('runState').textContent = '正在停止…'; };
+$('download').onclick = () => { window.location = '/api/csv'; };
+$('sendWebhook').onclick = async () => {
+  $('webhookMsg').textContent = '傳送中…'; $('webhookMsg').className = 'hint';
+  try { const r = await api('/api/webhook', {}); $('webhookMsg').textContent = r.message; $('webhookMsg').className = 'hint ok'; }
+  catch (e) { $('webhookMsg').textContent = e.message; $('webhookMsg').className = 'hint bad'; }
+};
+$('saveSettings').onclick = async () => {
+  try {
+    const r = await api('/api/settings', {
+      base_url: $('baseUrl').value, model: $('model').value, api_key: $('apiKey').value,
+      webhook_url: $('webhook').value, headless: $('headless').checked,
+    });
+    $('apiKey').value = ''; $('webhook').value = ''; renderSettings(r.settings);
+    $('settingsMsg').textContent = '已儲存'; $('settingsMsg').className = 'hint ok';
+  } catch (e) { $('settingsMsg').textContent = e.message; $('settingsMsg').className = 'hint bad'; }
+};
+
+(async () => {
+  const state = await api('/api/state');
+  renderLogin(state.login); renderSettings(state.settings);
+  const job = await api('/api/job');
+  if (job.state === 'running') startPolling(); else if (job.state === 'done') renderJob(job);
+})();
+</script>
+</body>
+</html>
