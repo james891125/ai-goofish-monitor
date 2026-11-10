@@ -7,7 +7,6 @@ import os
 import json
 import base64
 from typing import Dict, List, Optional
-from datetime import datetime
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from src.ai_message_builder import (
@@ -16,17 +15,10 @@ from src.ai_message_builder import (
 )
 from src.infrastructure.config.settings import AISettings
 from src.infrastructure.config.env_manager import env_manager
-from src.services.ai_request_compat import (
-    CHAT_COMPLETIONS_API_MODE,
-    RESPONSES_API_MODE,
-    build_ai_request_params,
-    create_ai_response_async,
-    is_chat_completions_api_unsupported_error,
-    is_json_output_unsupported_error,
-    is_responses_api_unsupported_error,
-    is_temperature_unsupported_error,
-    remove_temperature_param,
-)
+from src.services.ai_request_compat import AIRequestCompatibility, create_ai_response_async
+from src.services.ai_analysis_validator import parse_validated_analysis
+from src.services.remote_image_urls import safe_public_https_url
+
 from src.services.ai_response_parser import (
     EmptyAIResponseError,
     extract_ai_response_content,
@@ -106,7 +98,7 @@ class AIClient:
 
         try:
             if self.settings.proxy_url:
-                print(f"正在为 AI 请求使用代理: {self.settings.proxy_url}")
+                print("正在為 AI 請求使用已設定的代理")
                 os.environ['HTTP_PROXY'] = self.settings.proxy_url
                 os.environ['HTTPS_PROXY'] = self.settings.proxy_url
 
@@ -117,7 +109,7 @@ class AIClient:
                 base_url=self.settings.base_url
             )
         except Exception as e:
-            print(f"初始化 AI 客户端失败: {e}")
+            print(f"初始化 AI 用戶端失敗：{type(e).__name__}")
             return None
 
     def is_available(self) -> bool:
@@ -152,7 +144,9 @@ class AIClient:
         self,
         product_data: Dict,
         image_paths: List[str],
-        prompt_text: str
+        prompt_text: str,
+        *,
+        remote_image_urls: Optional[List[str]] = None,
     ) -> Optional[Dict]:
         """
         分析商品数据
@@ -170,17 +164,20 @@ class AIClient:
             return None
 
         try:
-            messages = self._build_messages(product_data, image_paths, prompt_text)
+            messages = self._build_messages(product_data, image_paths, prompt_text, remote_image_urls=remote_image_urls)
             response = await self._call_ai(messages)
-            return self._parse_response(response)
+            return parse_validated_analysis(response, product_data)
         except Exception as e:
-            print(f"AI 分析失败: {e}")
+            print(f"AI 分析失敗：{type(e).__name__}")
             return None
 
-    def _build_messages(self, product_data: Dict, image_paths: List[str], prompt_text: str) -> List[Dict]:
+    def _build_messages(self, product_data: Dict, image_paths: List[str], prompt_text: str, *, remote_image_urls: Optional[List[str]] = None) -> List[Dict]:
         """构建 AI 消息"""
         product_json = json.dumps(product_data, ensure_ascii=False, indent=2)
-        image_data_urls: List[str] = []
+        image_data_urls: List[str] = [
+            validated for url in (remote_image_urls or [])[:8]
+            if (validated := safe_public_https_url(url)) is not None
+        ]
         for path in image_paths:
             base64_img = self.encode_image(path)
             if base64_img:
@@ -202,79 +199,35 @@ class AIClient:
         max_output_tokens: int = 4000,
         enable_json_output: Optional[bool] = None,
     ) -> str:
-        """调用 AI API"""
-        api_mode = CHAT_COMPLETIONS_API_MODE
-        use_response_format = (
-            self.settings.enable_response_format
-            if enable_json_output is None
-            else enable_json_output
+        """Call an OpenAI-compatible endpoint with bounded capability fallbacks."""
+        state = AIRequestCompatibility(
+            self.settings.model_name,
+            self.settings.enable_response_format if enable_json_output is None else enable_json_output,
         )
-        use_temperature = True
-        max_attempts = 4
-
-        for attempt in range(max_attempts):
-            request_params = build_ai_request_params(
-                api_mode,
-                model=self.settings.model_name,
-                messages=messages,
-                temperature=temperature,
-                max_output_tokens=max_output_tokens,
-                enable_json_output=use_response_format,
+        empty_responses = 0
+        # Four content attempts plus token, endpoint, JSON and temperature adaptation.
+        for _attempt in range(8):
+            request_params = state.build(
+                messages, temperature=temperature, max_output_tokens=max_output_tokens,
             )
-            if not use_temperature:
-                request_params = remove_temperature_param(request_params)
-
             if self.settings.enable_thinking:
                 request_params["extra_body"] = {"enable_thinking": False}
-
             try:
-                response = await create_ai_response_async(
-                    self.client,
-                    api_mode,
-                    request_params,
-                )
+                response = await create_ai_response_async(self.client, state.api_mode, request_params)
                 return extract_ai_response_content(response)
-            except EmptyAIResponseError as exc:
-                if attempt < max_attempts - 1:
-                    print(
-                        f"AI响应为空，正在自动重试 ({attempt + 2}/{max_attempts})"
-                    )
-                    continue
-                raise exc
+            except EmptyAIResponseError:
+                empty_responses += 1
+                if empty_responses >= 4:
+                    raise
             except Exception as exc:
-                changed = False
-                if (
-                    api_mode == CHAT_COMPLETIONS_API_MODE
-                    and is_chat_completions_api_unsupported_error(exc)
-                ):
-                    api_mode = RESPONSES_API_MODE
-                    changed = True
-                    print("当前服务未实现 Chat Completions API，正在自动回退到 Responses API")
-                elif (
-                    api_mode == RESPONSES_API_MODE
-                    and is_responses_api_unsupported_error(exc)
-                ):
-                    api_mode = CHAT_COMPLETIONS_API_MODE
-                    changed = True
-                    print("当前服务未实现 Responses API，正在自动回退到 Chat Completions API")
-                if use_response_format and is_json_output_unsupported_error(exc):
-                    use_response_format = False
-                    changed = True
-                    print("当前模型不支持结构化 JSON 输出，正在自动重试并移除该参数")
-                if use_temperature and is_temperature_unsupported_error(exc):
-                    use_temperature = False
-                    changed = True
-                    print("当前模型不支持 temperature 参数，正在自动重试并移除该参数")
-                if changed and attempt < max_attempts - 1:
-                    continue
-                raise
-
-        raise RuntimeError("AI 调用在兼容性重试后仍未返回结果")
+                if not state.adapt(exc):
+                    raise
+        raise RuntimeError("AI 呼叫在相容性重試後仍未回傳結果")
 
     def _parse_response(self, response_text: str) -> Optional[Dict]:
         """解析 AI 响应"""
         try:
             return parse_ai_response_json(response_text)
         except json.JSONDecodeError:
-            print(f"无法解析 AI 响应: {response_text[:100]}")
+            print("無法解析 AI 回應 JSON")
             return None

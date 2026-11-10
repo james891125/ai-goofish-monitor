@@ -1,0 +1,18 @@
+[
+  {
+    "platform": "shopee_tw",
+    "product_id": "your-shopid.your-itemid",
+    "title": "RTX 5070 Ti 二手顯示卡（請以有權使用的實際資料取代）",
+    "price_twd": 20000,
+    "original_price_twd": null,
+    "condition": "used",
+    "description": "格式範例，非真實販售商品或市場行情。",
+    "images": [],
+    "images_allowed": false,
+    "product_url": "",
+    "seller": {"seller_id": null, "name": null, "rating": null, "review_count": null, "location": null, "verified_type": null, "seller_type": null},
+    "listed_at": null,
+    "category": null,
+    "is_ad": null
+  }
+]

@@ -213,7 +213,7 @@ def test_get_ai_analysis_retries_without_temperature_when_gateway_rejects_it(
     assert "temperature" not in request_history[1]
 
 
-def test_get_ai_analysis_uses_first_json_object_when_model_returns_multiple_objects(
+def test_get_ai_analysis_rejects_ambiguous_multiple_json_objects(
     monkeypatch, tmp_path
 ):
     monkeypatch.chdir(tmp_path)
@@ -231,13 +231,13 @@ def test_get_ai_analysis_uses_first_json_object_when_model_returns_multiple_obje
     monkeypatch.setattr(ai_handler, "ENABLE_RESPONSE_FORMAT", True)
     monkeypatch.setattr(app_config, "ENABLE_RESPONSE_FORMAT", True)
 
-    result = asyncio.run(
-        ai_handler.get_ai_analysis(
-            {"商品信息": {"商品ID": "5", "商品标题": "测试商品5"}},
-            image_paths=[],
-            prompt_text="请输出 JSON",
+    # Two contradictory recommendations are ambiguous. The production analysis
+    # boundary must reject them, rather than silently trust whichever is first.
+    with pytest.raises(ValueError, match="單一有效 JSON"):
+        asyncio.run(
+            ai_handler.get_ai_analysis(
+                {"商品信息": {"商品ID": "5", "商品标题": "测试商品5"}},
+                image_paths=[],
+                prompt_text="请输出 JSON",
+            )
         )
-    )
-
-    assert result["is_recommended"] is True
-    assert result["reason"] == "first"
