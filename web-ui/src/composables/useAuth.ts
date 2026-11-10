@@ -1,13 +1,10 @@
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { wsService } from '@/services/websocket'
 
 // Global State
 const username = ref<string | null>(localStorage.getItem('auth_username'))
 const isLoggedIn = ref(localStorage.getItem('auth_logged_in') === 'true')
 
 export function useAuth() {
-  const router = useRouter()
 
   const isAuthenticated = computed(() => isLoggedIn.value)
 
@@ -18,25 +15,18 @@ export function useAuth() {
     localStorage.setItem('auth_username', user)
     localStorage.setItem('auth_logged_in', 'true')
 
-    // 启动 WebSocket 连接
-    wsService.start()
   }
 
-  function logout() {
+  async function logout() {
+    try { await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' }) } catch { /* Clear local session even when the server is unreachable. */ }
     username.value = null
     isLoggedIn.value = false
     localStorage.removeItem('auth_username')
     localStorage.removeItem('auth_logged_in')
 
-    // 停止 WebSocket 连接
-    wsService.stop()
 
-    // Redirect to login if using router
-    if (router) {
-      router.push('/login')
-    } else {
-      window.location.href = '/login'
-    }
+    // A full navigation also clears in-memory data from the previous session.
+    window.location.assign('/login')
   }
 
   async function login(user: string, pass: string): Promise<boolean> {

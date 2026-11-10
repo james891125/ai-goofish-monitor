@@ -109,3 +109,9 @@ def test_explicit_https_port_is_also_redacted(monkeypatch, caplog):
     caplog.set_level(logging.INFO, logger="httpx")
     assert asyncio.run(discord.send(PRODUCT, ANALYSIS, WEBHOOK.replace("discord.com/", "discord.com:443/")))
     assert "unit-test-only-token" not in caplog.text
+
+
+def test_keyword_result_is_not_labeled_ai_recommendation():
+    payload=discord.build_discord_payload({'title':'測試','price_twd':100},{'recommended':True,'mode':'keyword','reason':'條件符合'})
+    fields=payload['embeds'][0]['fields']
+    assert any(field['name']=='關鍵字篩選' and '未進行 AI 分析' in field['value'] for field in fields)

@@ -71,6 +71,8 @@ def build_discord_payload(product: dict, analysis: dict) -> dict:
     """Render one embed below Discord limits; disable all user/role mentions."""
     recommended = analysis.get("is_recommended", analysis.get("recommended"))
     verdict = "值得考慮" if recommended is True else "不推薦" if recommended is False else "資訊不足"
+    if analysis.get('mode') == 'keyword':
+        verdict = '符合關鍵字條件；未進行 AI 分析'
     risks = analysis.get("risk_tags", analysis.get("risks", []))
     risk_text = "、".join(str(tag) for tag in risks) if isinstance(risks, list) and risks else "未列出已知風險（不代表無風險）"
     embed = {
@@ -79,7 +81,7 @@ def build_discord_payload(product: dict, analysis: dict) -> dict:
         "color": 0x238636 if recommended is True else 0xE87722,
         "fields": [
             {"name": "商品價格", "value": _price(product.get("price_twd")), "inline": True},
-            {"name": "AI 推薦", "value": verdict, "inline": True},
+            {"name": "關鍵字篩選" if analysis.get("mode") == "keyword" else "AI 推薦", "value": verdict, "inline": True},
             {"name": "主要風險", "value": _text(risk_text, 900), "inline": False},
             {"name": "發現時間", "value": _text(product.get("collected_at"), 100), "inline": False},
         ],

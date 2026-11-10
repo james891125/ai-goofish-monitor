@@ -1,7 +1,4 @@
-"""
-AI 客户端封装
-提供统一的 AI 调用接口
-"""
+"""臺灣蝦皮商品使用的 OpenAI 相容分析用戶端。"""
 import ipaddress
 import os
 import json
@@ -22,7 +19,6 @@ from src.services.remote_image_urls import safe_public_https_url
 from src.services.ai_response_parser import (
     EmptyAIResponseError,
     extract_ai_response_content,
-    parse_ai_response_json,
 )
 
 
@@ -75,7 +71,7 @@ def _sanitize_no_proxy_env() -> None:
 
 
 class AIClient:
-    """AI 客户端封装"""
+    """建立訊息、協商 API 參數並驗證商品分析。"""
 
     def __init__(self):
         self.settings: Optional[AISettings] = None
@@ -83,7 +79,7 @@ class AIClient:
         self.refresh()
 
     def _load_settings(self) -> None:
-        load_dotenv(dotenv_path=env_manager.env_file, override=True)
+        load_dotenv(dotenv_path=env_manager.env_file, override=True, interpolate=False)
         self.settings = AISettings()
 
     def refresh(self) -> None:
@@ -91,9 +87,9 @@ class AIClient:
         self.client = self._initialize_client()
 
     def _initialize_client(self) -> Optional[AsyncOpenAI]:
-        """初始化 OpenAI 客户端"""
+        """初始化 OpenAI 用戶端。"""
         if not self.settings or not self.settings.is_configured():
-            print("警告：AI 配置不完整，AI 功能将不可用")
+            print("警告：AI 設定不完整，請填寫 API Key、Base URL 與模型名稱")
             return None
 
         try:
@@ -113,11 +109,11 @@ class AIClient:
             return None
 
     def is_available(self) -> bool:
-        """检查 AI 客户端是否可用"""
+        """檢查 AI 用戶端是否已初始化。"""
         return self.client is not None
 
     async def close(self) -> None:
-        """关闭底层异步客户端，避免事件循环结束后再触发清理。"""
+        """關閉非同步用戶端，避免事件迴圈結束後仍保留連線。"""
         client = self.client
         self.client = None
         if client is None:
@@ -130,14 +126,14 @@ class AIClient:
 
     @staticmethod
     def encode_image(image_path: str) -> Optional[str]:
-        """将图片编码为 Base64"""
+        """將已授權的本機圖片編碼為 Base64。"""
         if not image_path or not os.path.exists(image_path):
             return None
         try:
             with open(image_path, "rb") as f:
                 return base64.b64encode(f.read()).decode('utf-8')
         except Exception as e:
-            print(f"编码图片失败: {e}")
+            print(f"圖片編碼失敗：{type(e).__name__}")
             return None
 
     async def analyze(
@@ -148,19 +144,9 @@ class AIClient:
         *,
         remote_image_urls: Optional[List[str]] = None,
     ) -> Optional[Dict]:
-        """
-        分析商品数据
-
-        Args:
-            product_data: 商品数据
-            image_paths: 图片路径列表
-            prompt_text: 分析提示词
-
-        Returns:
-            分析结果
-        """
+        """分析標準商品資料，僅回傳通過結構與證據檢查的結果。"""
         if not self.is_available():
-            print("AI 客户端不可用")
+            print("AI 用戶端尚未設定")
             return None
 
         try:
@@ -172,7 +158,7 @@ class AIClient:
             return None
 
     def _build_messages(self, product_data: Dict, image_paths: List[str], prompt_text: str, *, remote_image_urls: Optional[List[str]] = None) -> List[Dict]:
-        """构建 AI 消息"""
+        """建立文字或多模態訊息，不下載遠端圖片。"""
         product_json = json.dumps(product_data, ensure_ascii=False, indent=2)
         image_data_urls: List[str] = [
             validated for url in (remote_image_urls or [])[:8]
@@ -210,8 +196,6 @@ class AIClient:
             request_params = state.build(
                 messages, temperature=temperature, max_output_tokens=max_output_tokens,
             )
-            if self.settings.enable_thinking:
-                request_params["extra_body"] = {"enable_thinking": False}
             try:
                 response = await create_ai_response_async(self.client, state.api_mode, request_params)
                 return extract_ai_response_content(response)
@@ -223,11 +207,3 @@ class AIClient:
                 if not state.adapt(exc):
                     raise
         raise RuntimeError("AI 呼叫在相容性重試後仍未回傳結果")
-
-    def _parse_response(self, response_text: str) -> Optional[Dict]:
-        """解析 AI 响应"""
-        try:
-            return parse_ai_response_json(response_text)
-        except json.JSONDecodeError:
-            print("無法解析 AI 回應 JSON")
-            return None

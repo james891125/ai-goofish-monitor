@@ -86,7 +86,7 @@ def test_api_modes_do_not_oscillate():
 
 def test_multiple_parameter_fallbacks_then_response_success():
     instance = AIClient.__new__(AIClient)
-    instance.settings = SimpleNamespace(model_name="alias", enable_response_format=True, enable_thinking=False)
+    instance.settings = SimpleNamespace(model_name="alias", enable_response_format=True)
     history = []
     async def create(**kwargs):
         history.append(kwargs)

@@ -2,84 +2,47 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
-import LocaleToggle from '@/components/layout/LocaleToggle.vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { useI18n } from 'vue-i18n'
-
+import { ShoppingBag, ArrowRight, LockKeyhole } from 'lucide-vue-next'
 const username = ref('')
 const password = ref('')
-const isLoading = ref(false)
+const busy = ref(false)
 const error = ref('')
-
 const { login } = useAuth()
 const router = useRouter()
 const route = useRoute()
-const { t } = useI18n()
-
-async function handleLogin() {
-  if (!username.value || !password.value) {
-    error.value = t('login.errors.missingCredentials')
-    return
-  }
-
-  isLoading.value = true
+async function submit() {
+  if (busy.value) return
+  if (!username.value.trim() || !password.value) { error.value = '請輸入管理員帳號及密碼。'; return }
+  busy.value = true
   error.value = ''
-
   try {
-    const success = await login(username.value, password.value)
-    if (success) {
-      const redirectPath = (route.query.redirect as string) || '/'
-      router.push(redirectPath)
-    } else {
-      error.value = t('login.errors.invalidCredentials')
-    }
-  } catch (e) {
-    error.value = t('login.errors.unexpected')
-  } finally {
-    isLoading.value = false
-  }
+    if (await login(username.value.trim(), password.value)) {
+      password.value = ''
+      const redirect = typeof route.query.redirect === 'string' && /^\/(?!\/)/.test(route.query.redirect) ? route.query.redirect : '/tasks'
+      await router.push(redirect)
+    } else error.value = '無法登入。請確認帳號、密碼及伺服器連線。'
+  } finally { busy.value = false }
 }
 </script>
-
 <template>
-  <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-100 px-4">
-    <div aria-hidden="true" class="absolute inset-0">
-      <div class="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary/10 blur-3xl"></div>
-      <div class="absolute bottom-[-10%] right-[-5%] h-72 w-72 rounded-full bg-blue-300/10 blur-3xl"></div>
-    </div>
-    <div class="absolute right-6 top-6">
-      <LocaleToggle />
-    </div>
-    <Card class="app-surface relative z-10 w-full max-w-md border-none">
-      <CardHeader>
-        <CardTitle class="text-2xl text-center">{{ t('login.title') }}</CardTitle>
-        <CardDescription class="text-center">
-          {{ t('login.description') }}
-        </CardDescription>
-      </CardHeader>
-      <form @submit.prevent="handleLogin">
-        <CardContent class="grid gap-4">
-          <div class="grid gap-2">
-            <Label for="username">{{ t('login.username') }}</Label>
-            <Input id="username" type="text" v-model="username" placeholder="admin" required />
-          </div>
-          <div class="grid gap-2">
-            <Label for="password">{{ t('login.password') }}</Label>
-            <Input id="password" type="password" v-model="password" required />
-          </div>
-          <div v-if="error" class="text-sm font-medium text-red-500" role="alert">
-            {{ error }}
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button class="w-full" type="submit" :disabled="isLoading">
-            {{ isLoading ? t('login.submitting') : t('login.submit') }}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
-  </div>
+  <main class="login-screen">
+    <section class="login-story">
+      <div class="brand"><span class="brand-icon"><ShoppingBag :size="25" /></span><span>蝦皮臺灣<span class="brand-sub">AI 商品監控</span></span></div>
+      <div><span class="eyebrow">更有依據的購物決策</span><h1>找到合適的商品，<br>留住值得注意的變化。</h1><p>關鍵字篩選、價格紀錄與 AI 分析。<br>從每一筆有來源的資訊開始。</p></div>
+      <p class="login-footnote">獨立開源工具，非蝦皮官方服務。</p>
+    </section>
+    <section class="login-panel">
+      <div class="login-form">
+        <span class="login-lock"><LockKeyhole :size="23" /></span><h2>登入監控中心</h2><p class="muted">使用系統管理員帳號登入，不需蝦皮帳號。</p>
+        <div class="notice compact"><strong>等待資料來源授權</strong><p>目前提供模擬測試與合法資料匯入，尚未開放全站即時搜尋。</p></div>
+        <form @submit.prevent="submit">
+          <label class="field">管理員帳號<input v-model="username" autocomplete="username" required placeholder="輸入帳號" /></label>
+          <label class="field">密碼<input v-model="password" type="password" autocomplete="current-password" required placeholder="輸入密碼" /></label>
+          <p v-if="error" class="inline-error" role="alert">{{ error }}</p>
+          <button class="button primary login-submit" :disabled="busy">{{ busy ? '正在登入…' : '登入' }}<ArrowRight :size="17" /></button>
+        </form>
+        <p class="small muted">憑證僅用於本系統驗證。請由部署管理員設定帳密，並使用 HTTPS 保護連線。</p>
+      </div>
+    </section>
+  </main>
 </template>

@@ -1,3 +1,4 @@
-from .settings import settings, AppSettings, AISettings, NotificationSettings
+"""應用程式設定工具。"""
+from .settings import AISettings
 
-__all__ = ["settings", "AppSettings", "AISettings", "NotificationSettings"]
+__all__ = ["AISettings"]
