@@ -19,13 +19,13 @@ def test_parse_ai_response_json_uses_first_object_when_multiple_json_objects_are
 
 
 def test_parse_ai_response_json_extracts_json_from_wrapped_text():
-    content = """分析结果如下：
+    content = """分析結果如下：
 
 ```json
 {"is_recommended": true, "reason": "wrapped"}
 ```
 
-请按第一份结果处理。"""
+請按第一份結果處理。"""
 
     result = parse_ai_response_json(content)
 
@@ -34,27 +34,27 @@ def test_parse_ai_response_json_extracts_json_from_wrapped_text():
 
 def test_parse_ai_response_json_raises_when_no_json_exists():
     with pytest.raises(ValueError):
-        parse_ai_response_json("没有任何 JSON 内容")
+        parse_ai_response_json("沒有任何 JSON 內容")
 
 
 def test_extract_ai_response_content_with_none_content_but_valid_reasoning_content():
-    """当 content 为 None 但 reasoning_content 有值时，应该成功提取 reasoning_content 的内容"""
-    # 创建 mock 对象模拟 OpenAI 风格的响应
+    """當 content 為 None 但 reasoning_content 有值時，應該成功提取 reasoning_content 的內容"""
+    # 建立 mock 物件模擬 OpenAI 風格的響應
     message = type('Message', (), {
         'content': None,
-        'reasoning_content': '这是推理内容'
+        'reasoning_content': '這是推理內容'
     })()
     choice = type('Choice', (), {'message': message})()
     response = type('Response', (), {'choices': [choice]})()
 
     result = extract_ai_response_content(response)
 
-    assert result == '这是推理内容'
+    assert result == '這是推理內容'
 
 
 def test_extract_ai_response_content_raises_when_content_and_reasoning_content_are_empty():
-    """当 content 和 reasoning_content 都为空时，应该抛出 EmptyAIResponseError"""
-    # 创建 mock 对象
+    """當 content 和 reasoning_content 都為空時，應該丟擲 EmptyAIResponseError"""
+    # 建立 mock 物件
     message = type('Message', (), {
         'content': None,
         'reasoning_content': None

@@ -58,11 +58,11 @@ def test_start_stop_task_updates_status(api_client, api_context, sample_task_pay
 
 def test_generate_keyword_mode_task_without_ai_criteria(api_client):
     payload = {
-        "task_name": "A7M4 关键词筛选",
+        "task_name": "A7M4 關鍵詞篩選",
         "keyword": "sony a7m4",
         "description": "",
         "decision_mode": "keyword",
-        "keyword_rules": ["a7m4", "验货宝"],
+        "keyword_rules": ["a7m4", "驗貨寶"],
         "max_pages": 2,
         "personal_only": True,
     }
@@ -72,14 +72,14 @@ def test_generate_keyword_mode_task_without_ai_criteria(api_client):
     created = response.json()["task"]
     assert created["decision_mode"] == "keyword"
     assert created["ai_prompt_criteria_file"] == ""
-    assert created["keyword_rules"] == ["a7m4", "验货宝"]
+    assert created["keyword_rules"] == ["a7m4", "驗貨寶"]
 
 
 def test_generate_ai_task_returns_job_and_completes_async(api_client, api_context, monkeypatch):
     payload = {
         "task_name": "Apple Watch S10",
         "keyword": "apple watch s10",
-        "description": "只看国行蜂窝版，电池健康高于 95%，拒绝维修机。",
+        "description": "只看國行蜂窩版，電池健康高於 95%，拒絕維修機。",
         "analyze_images": False,
         "decision_mode": "ai",
         "max_pages": 2,
@@ -88,7 +88,7 @@ def test_generate_ai_task_returns_job_and_completes_async(api_client, api_contex
 
     async def fake_generate_criteria(*_args, **_kwargs):
         await asyncio.sleep(0.05)
-        return "[V6.3 核心升级]\\nApple Watch criteria"
+        return "[V6.3 核心升級]\\nApple Watch criteria"
 
     monkeypatch.setattr(
         "src.services.task_generation_runner.generate_criteria",
@@ -113,7 +113,7 @@ def test_generate_ai_task_returns_job_and_completes_async(api_client, api_contex
             break
         time.sleep(0.02)
     else:
-        raise AssertionError("任务生成作业未在预期时间内完成")
+        raise AssertionError("任務生成作業未在預期時間內完成")
 
     assert latest_job["task"]["task_name"] == payload["task_name"]
     assert latest_job["task"]["ai_prompt_criteria_file"].endswith("_criteria.txt")

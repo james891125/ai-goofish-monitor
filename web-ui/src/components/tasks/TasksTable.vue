@@ -165,7 +165,7 @@ const emit = defineEmits<{
                 {{ t('tasks.table.headers.crawl') }}
               </p>
               <p class="mt-2 text-sm font-bold text-slate-700">
-                ¥{{ task.min_price || 0 }} - {{ task.max_price || 'MAX' }}
+                NT${{ task.min_price || 0 }} - {{ task.max_price || 'MAX' }}
               </p>
               <div class="mt-2 flex flex-wrap gap-1.5">
                 <Badge variant="outline" class="border-slate-200/70 bg-slate-50 text-slate-500">
@@ -382,7 +382,7 @@ const emit = defineEmits<{
             <TableCell class="align-middle text-left">
               <div class="space-y-2">
                 <div class="flex items-baseline gap-0.5">
-                  <span class="text-[10px] font-bold text-slate-400 mr-1 italic">¥</span>
+                  <span class="text-[10px] font-bold text-slate-400 mr-1 italic">NT$</span>
                   <span class="text-sm font-black text-slate-700 tracking-tighter">
                     {{ task.min_price || 0 }} <span class="text-slate-300 font-normal mx-0.5">-</span> {{ task.max_price || 'MAX' }}
                   </span>

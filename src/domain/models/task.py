@@ -1,6 +1,6 @@
 """
-任务领域模型
-定义任务实体及其业务逻辑
+任務領域模型
+定義任務實體及其業務邏輯
 """
 import re
 from enum import Enum
@@ -16,7 +16,7 @@ from src.services.account_strategy_service import (
 
 
 class TaskStatus(str, Enum):
-    """任务状态枚举"""
+    """任務狀態列舉"""
 
     STOPPED = "stopped"
     RUNNING = "running"
@@ -105,7 +105,7 @@ def _normalize_price_value(value):
 
 
 class Task(BaseModel):
-    """任务实体"""
+    """任務實體"""
 
     model_config = ConfigDict(use_enum_values=True, extra="ignore")
 
@@ -142,21 +142,21 @@ class Task(BaseModel):
         return _normalize_keyword_values(value)
 
     def can_start(self) -> bool:
-        """检查任务是否可以启动"""
+        """檢查任務是否可以啟動"""
         return self.enabled and not self.is_running
 
     def can_stop(self) -> bool:
-        """检查任务是否可以停止"""
+        """檢查任務是否可以停止"""
         return self.is_running
 
     def apply_update(self, update: "TaskUpdate") -> "Task":
-        """应用更新并返回新的任务实例"""
+        """應用更新並返回新的任務實例"""
         update_data = update.model_dump(exclude_unset=True)
         return self.model_copy(update=update_data)
 
 
 class TaskCreate(BaseModel):
-    """创建任务的DTO"""
+    """建立任務的DTO"""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -214,16 +214,16 @@ class TaskCreate(BaseModel):
     def validate_decision_mode_payload(self):
         description = str(self.description or "").strip()
         if self.decision_mode == "ai" and not description:
-            raise ValueError("AI 判断模式下，详细需求(description)不能为空。")
+            raise ValueError("AI 判斷模式下，詳細需求(description)不能為空。")
         if self.decision_mode == "keyword" and not _has_keyword_rules(self.keyword_rules):
-            raise ValueError("关键词判断模式下，至少需要一个关键词。")
+            raise ValueError("關鍵詞判斷模式下，至少需要一個關鍵詞。")
         if self.account_strategy == "fixed" and not self.account_state_file:
-            raise ValueError("固定账号模式下必须选择账号。")
+            raise ValueError("固定帳號模式下必須選擇帳號。")
         return self
 
 
 class TaskUpdate(BaseModel):
-    """更新任务的DTO"""
+    """更新任務的DTO"""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -282,15 +282,15 @@ class TaskUpdate(BaseModel):
     def validate_partial_keyword_payload(self):
         if self.decision_mode == "keyword" and self.keyword_rules is not None:
             if not _has_keyword_rules(self.keyword_rules):
-                raise ValueError("关键词判断模式下，至少需要一个关键词。")
+                raise ValueError("關鍵詞判斷模式下，至少需要一個關鍵詞。")
         if self.decision_mode == "ai" and self.description is not None:
             if not str(self.description).strip():
-                raise ValueError("AI 判断模式下，详细需求(description)不能为空。")
+                raise ValueError("AI 判斷模式下，詳細需求(description)不能為空。")
         return self
 
 
 class TaskGenerateRequest(BaseModel):
-    """任务创建请求DTO（AI模式支持自动生成标准）"""
+    """任務建立請求DTO（AI模式支援自動生成標準）"""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -350,9 +350,9 @@ class TaskGenerateRequest(BaseModel):
     def validate_decision_mode_payload(self):
         description = str(self.description or "").strip()
         if self.decision_mode == "ai" and not description:
-            raise ValueError("AI 判断模式下，详细需求(description)不能为空。")
+            raise ValueError("AI 判斷模式下，詳細需求(description)不能為空。")
         if self.decision_mode == "keyword" and not _has_keyword_rules(self.keyword_rules):
-            raise ValueError("关键词判断模式下，至少需要一个关键词。")
+            raise ValueError("關鍵詞判斷模式下，至少需要一個關鍵詞。")
         if self.account_strategy == "fixed" and not self.account_state_file:
-            raise ValueError("固定账号模式下必须选择账号。")
+            raise ValueError("固定帳號模式下必須選擇帳號。")
         return self

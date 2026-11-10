@@ -2,102 +2,105 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目概述
+## 專案概述
 
-基于 Playwright + AI 的蝦皮 (Shopee) 智能监控机器人（由闲鱼版本改造而来）。FastAPI 后端 + Vue 3 前端，支持多任务并发监控、多模态 AI 商品分析、多渠道通知推送。
+基於 Playwright + AI 的蝦皮 (Shopee) 智慧監控機器人（由閒魚監控專案改造而來）。FastAPI 後端 + Vue 3 前端，支援多任務並行監控、多模態 AI 商品分析、Webhook 通知。
 
-## 核心架构
+## 核心架構
 
 ```
-API层 (src/api/routes/)
+API層 (src/api/routes/)
     ↓
-服务层 (src/services/)
+服務層 (src/services/)
     ↓
-领域层 (src/domain/)
+領域層 (src/domain/)
     ↓
-基础设施层 (src/infrastructure/)
+基礎設施層 (src/infrastructure/)
 ```
 
-关键入口：
-- `src/app.py` - FastAPI 应用主入口
-- `spider_v2.py` - 爬虫 CLI 入口
-- `src/scraper.py` - Playwright 爬虫核心逻辑（`scrape_shopee`）
-- `src/shopee.py` - 蝦皮 URL 组装与 API 响应解析（纯函数）
+關鍵入口：
+- `src/app.py` - FastAPI 應用主入口
+- `spider_v2.py` - 爬蟲 CLI 入口
+- `src/scraper.py` - Playwright 爬蟲核心邏輯（`scrape_shopee`）
+- `src/shopee.py` - 蝦皮 URL 組裝與 API 響應解析（純函式）
 
-服务层：
-- `TaskService` - 任务 CRUD
-- `ProcessService` - 爬虫子进程管理
-- `SchedulerService` - APScheduler 定时调度
-- `AIAnalysisService` - 多模态 AI 分析
-- `NotificationService` - 多渠道通知（ntfy/Bark/企业微信/Telegram/Webhook）
+服務層：
+- `TaskService` - 任務 CRUD
+- `ProcessService` - 爬蟲子程序管理
+- `SchedulerService` - APScheduler 定時排程
+- `AIAnalysisService` - 多模態 AI 分析
+- `NotificationService` - 通知（僅通用 Webhook）
 
 前端 (`web-ui/`)：Vue 3 + Vite + shadcn-vue + Tailwind CSS
 
-## 开发命令
+## 開發命令
 
 ```bash
-# 后端开发
+# 後端開發
 python -m src.app
 # 或
 uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
 
-# 前端开发
+# 前端開發
 cd web-ui && npm install && npm run dev
 
-# 前端构建
+# 前端構建
 cd web-ui && npm run build
 
-# 一键本地启动（构建前端 + 启动后端）
-bash start.sh
+# 一鍵本地啟動（建立 .venv、建置前端、首次詢問帳密、啟動後端）
+python3 start.py        # Windows 雙擊 start.bat
 
 # Docker 部署
 docker compose up --build -d
 ```
 
-## 爬虫命令
+## 爬蟲命令
 
 ```bash
-python spider_v2.py                          # 运行所有启用任务
-python spider_v2.py --task-name "MacBook"    # 运行指定任务
-python spider_v2.py --debug-limit 3          # 调试模式，限制商品数
-python spider_v2.py --config custom.json     # 自定义配置文件
+python spider_v2.py                          # 執行所有啟用任務
+python spider_v2.py --task-name "MacBook"    # 執行指定任務
+python spider_v2.py --debug-limit 3          # 除錯模式，限制商品數
+python spider_v2.py --config custom.json     # 自定義配置檔案
 ```
 
-## 测试
+## 測試
 
 ```bash
-pytest                              # 运行所有测试
-pytest --cov=src                    # 覆盖率报告
-pytest tests/unit/test_utils.py    # 运行单个测试文件
-pytest tests/unit/test_utils.py::test_safe_get  # 运行单个测试函数
+pytest                              # 執行所有測試
+pytest --cov=src                    # 覆蓋率報告
+pytest tests/unit/test_utils.py    # 執行單個測試檔案
+pytest tests/unit/test_utils.py::test_safe_get  # 執行單個測試函式
 ```
 
-测试规范：文件 `tests/**/test_*.py`，函数 `test_*`
+測試規範：檔案 `tests/**/test_*.py`，函式 `test_*`
 
 ## 配置
 
-环境变量 (`.env`)：
+環境變數 (`.env`)：
 - AI 模型：`OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL_NAME`
-- 通知：`NTFY_TOPIC_URL`, `BARK_URL`, `WX_BOT_URL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-- 爬虫：`RUN_HEADLESS`, `LOGIN_IS_EDGE`, `SHOPEE_BASE_URL`（默认 `https://shopee.tw`）
-- Web 认证：`WEB_USERNAME`, `WEB_PASSWORD`
-- 端口：`SERVER_PORT`
+- 通知：`WEBHOOK_URL`, `WEBHOOK_METHOD`, `WEBHOOK_CONTENT_TYPE`, `WEBHOOK_HEADERS`, `WEBHOOK_QUERY_PARAMETERS`, `WEBHOOK_BODY`
+- 爬蟲：`RUN_HEADLESS`, `LOGIN_IS_EDGE`, `SHOPEE_BASE_URL`（預設 `https://shopee.tw`）
+- Web 認證：`WEB_USERNAME`, `WEB_PASSWORD`
+- 連接埠：`SERVER_PORT`
 
-任务配置 (`config.json`)：定义监控任务（关键词、价格范围、cron 表达式、AI prompt 文件等）
+任務配置 (`config.json`)：定義監控任務（關鍵詞、價格範圍、cron 表示式、AI prompt 檔案等）
 
-## 数据流
+## 資料流
 
-1. Web UI / config.json 创建任务
-2. SchedulerService 按 cron 触发或手动启动
-3. ProcessService 启动 spider_v2.py 子进程
-4. scraper.py 使用 Playwright 打开蝦皮搜索页/商品页，拦截页面自身的 `search_items` / `pdp/get_pc` API 响应
-5. AIAnalysisService 调用多模态模型分析
-6. NotificationService 推送符合条件的商品
-7. 结果存储：`jsonl/`（数据）、`images/`（图片）、`logs/`（日志）
+1. Web UI / config.json 建立任務
+2. SchedulerService 按 cron 觸發或手動啟動
+3. ProcessService 啟動 spider_v2.py 子程序
+4. scraper.py 使用 Playwright 開啟蝦皮搜尋頁/商品頁，攔截頁面自身的 `search_items` / `pdp/get_pc` API 響應
+5. AIAnalysisService 呼叫多模態模型分析
+6. NotificationService 推送符合條件的商品
+7. 結果儲存：`jsonl/`（資料）、`images/`（圖片）、`logs/`（日誌）
 
-## 注意事项
+## 注意事項
 
-- AI 模型必须支持图片上传（多模态）
-- Docker 部署需通过 Web UI 手动更新登录状态（`state.json`）
-- 遇到滑动验证码时设置 `RUN_HEADLESS=false` 手动处理
-- 生产环境务必修改默认 Web 认证密码
+- AI 模型必須支援圖片上傳（多模態）
+- Docker 部署需透過 Web UI 手動更新登入狀態（`state.json`）
+- 遇到滑動驗證碼時設定 `RUN_HEADLESS=false` 手動處理
+- 生產環境務必修改預設 Web 認證密碼
+- 專案文字一律使用臺灣繁體中文；資料記錄的鍵名（`商品資訊`、`目前售價`、`出貨地區` 等）前後端共用，修改時要同步
+- AI 走 OpenAI 相容的 Chat Completions，token 上限參數為 `max_completion_tokens`；Gemini / OpenRouter / OpenAI 預設值在 `setup_env.py` 與 `web-ui/src/views/SettingsView.vue`
+- 蝦皮登入狀態存在 `state/*.json`，由 `src/services/shopee_login_state.py` 檢查與整理

@@ -36,7 +36,7 @@ const enUSExtra = {
       enterHint: 'Press Enter to open the highlighted task',
       loading: 'Loading task list...',
       emptyTitle: 'No matching task found',
-      emptyDescription: 'Try task names, keywords, or regions such as MacBook, watch, or Shanghai.',
+      emptyDescription: 'Try task names, keywords, or regions such as MacBook, watch, or Taipei.',
       footerHint: 'Search results only come from the task list and do not change dashboard content.',
       keyboardUpDown: '↑↓ Navigate',
       keyboardEnter: 'Enter Open',
@@ -115,10 +115,10 @@ const enUSExtra = {
       },
     },
     region: {
-      provincePlaceholder: 'Select province / nationwide',
+      provincePlaceholder: 'Select a city/county (empty = all of Taiwan)',
       cityPlaceholder: 'Select city / group',
       districtPlaceholder: 'Select district / county',
-      helper: 'Region options come from a built-in Goofish snapshot and do not rely on live third-party requests.',
+      helper: 'Matched against the ship-from text of each Shopee item; only items shipped from that city/county are kept.',
       clear: 'Clear Region',
       current: 'Current: {path}',
     },
@@ -157,9 +157,28 @@ const enUSExtra = {
     proxy: { title: 'Proxy Rotation', description: 'The proxy pool stays independently controlled and can stack with account rotation.', pool: 'Proxy Pool (comma separated)' },
   },
   accounts: {
-    title: 'Goofish Accounts',
+    title: 'Shopee Accounts',
     description: 'Use the Chrome extension to extract login-state JSON and add accounts here.',
     add: '+ Add Account',
+    quick: {
+      title: 'Paste Shopee Cookies',
+      description: 'Paste what the extension copied and save. It is stored only on this computer in the state/ folder and survives restarts; when the cookies expire, paste again under the same name to overwrite.',
+      save: 'Save login state',
+      saved: 'Saved account {name}; Shopee login detected',
+      savedNotLoggedIn: 'Saved, but no login cookie was found',
+      notLoggedInHint: 'Make sure you are signed in on shopee.tw, then extract again.',
+    },
+    status: {
+      title: 'Login status',
+      loggedIn: 'Signed in',
+      notLoggedIn: 'Not signed in',
+      expired: 'Expired',
+      invalid: 'Corrupted file',
+      expiresAt: 'Login expires',
+      updated: 'Updated',
+      updatedAt: 'Updated {time}',
+      cookieCount: '{count} cookies',
+    },
     cookieGuide: {
       title: 'How to Get Shopee Cookies',
       step1Prefix: 'Load the chrome-extension/ folder of this project as an unpacked extension:',
@@ -167,7 +186,7 @@ const enUSExtra = {
       step2Prefix: 'Open and sign in to',
       website: 'Shopee (shopee.tw)',
       step3: 'Click the extension icon, choose "Extract Login State", then click "Copy to Clipboard".',
-      step4: 'Come back here, click "Add Account", paste the JSON content, and save it.',
+      step4: 'Come back here, paste it into the box above, and click "Save login state".',
       step5: 'If you manage multiple accounts, do not log out in the current window; use an incognito window to capture another account cookie.',
     },
     list: {
@@ -182,7 +201,7 @@ const enUSExtra = {
       delete: 'Delete',
     },
     createDialog: {
-      title: 'Add Goofish Account',
+      title: 'Add Shopee Account',
       description: 'Paste the JSON extracted by the Chrome extension.',
       name: 'Account Name',
       namePlaceholder: 'Example: acc_1',
@@ -227,31 +246,6 @@ const enUSExtra = {
     secretPlaceholder: 'Leave blank to keep the current value, or enter a new value to overwrite it',
     secretKeepPlaceholder: 'Leave blank to keep the current value',
     notConfigured: 'Not configured yet.',
-    ntfy: {
-      description: 'Best for lightweight delivery. The topic URL is not sensitive and can be displayed directly.',
-    },
-    bark: {
-      description: 'The URL contains a device key and is intentionally hidden.',
-      configuredHint: 'A sensitive value is configured and hidden on this page.',
-    },
-    gotify: {
-      description: 'URL and token must be configured together.',
-    },
-    pushplus: {
-      description: 'WeChat push service supporting official account, WeCom, App, and more.',
-      topicPlaceholder: 'Group code; leave empty to send to yourself only',
-    },
-    wecom: {
-      title: 'WeCom Bot',
-      description: 'The bot URL contains a key, so it is hidden and can only be updated or cleared.',
-      urlLabel: 'WeCom Bot URL',
-      configuredHint: 'Bot URL is already stored.',
-    },
-    telegram: {
-      description: 'The bot token is sensitive, while Chat ID and API base URL can be viewed and updated directly.',
-      chatIdPlaceholder: 'Example: 123456789',
-      apiBaseUrl: 'API / Proxy Base URL',
-    },
     webhook: {
       title: 'Generic Webhook',
       description: 'Supports JSON template variables. URL and headers are treated as sensitive and are not echoed back.',

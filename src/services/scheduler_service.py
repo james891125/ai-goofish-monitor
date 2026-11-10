@@ -1,6 +1,6 @@
 """
-调度服务
-负责管理定时任务的调度
+排程服務
+負責管理定時任務的排程
 """
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -12,23 +12,23 @@ from src.services.process_service import ProcessService
 
 
 class SchedulerService:
-    """调度服务"""
+    """排程服務"""
 
     def __init__(self, process_service: ProcessService):
-        self.scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
+        self.scheduler = AsyncIOScheduler(timezone="Asia/Taipei")
         self.process_service = process_service
 
     def start(self):
-        """启动调度器"""
+        """啟動排程器"""
         if not self.scheduler.running:
             self.scheduler.start()
-            print("调度器已启动")
+            print("排程器已啟動")
 
     def stop(self):
-        """停止调度器"""
+        """停止排程器"""
         if self.scheduler.running:
             self.scheduler.shutdown()
-            print("调度器已停止")
+            print("排程器已停止")
 
     def get_next_run_time(self, task_id: int):
         job = self.scheduler.get_job(f"task_{task_id}")
@@ -50,8 +50,8 @@ class SchedulerService:
             return None
 
     async def reload_jobs(self, tasks: List[Task]):
-        """重新加载所有定时任务"""
-        print("正在重新加载定时任务...")
+        """重新載入所有定時任務"""
+        print("正在重新載入定時任務...")
         self.scheduler.remove_all_jobs()
 
         for task in tasks:
@@ -69,13 +69,13 @@ class SchedulerService:
                         name=f"Scheduled: {task.task_name}",
                         replace_existing=True
                     )
-                    print(f"  -> 已为任务 '{task.task_name}' 添加定时规则: '{task.cron}'")
+                    print(f"  -> 已為任務 '{task.task_name}' 新增定時規則: '{task.cron}'")
                 except ValueError as e:
-                    print(f"  -> [警告] 任务 '{task.task_name}' 的 Cron 表达式无效: {e}")
+                    print(f"  -> [警告] 任務 '{task.task_name}' 的 Cron 表示式無效: {e}")
 
-        print("定时任务加载完成")
+        print("定時任務載入完成")
 
     async def _run_task(self, task_id: int, task_name: str):
-        """执行定时任务"""
-        print(f"定时任务触发: 正在为任务 '{task_name}' 启动爬虫...")
+        """執行定時任務"""
+        print(f"定時任務觸發: 正在為任務 '{task_name}' 啟動爬蟲...")
         await self.process_service.start_task(task_id, task_name)

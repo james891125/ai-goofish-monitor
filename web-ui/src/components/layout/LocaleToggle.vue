@@ -7,7 +7,7 @@ const { locale, toggleLocale } = useLocale()
 const { t } = useI18n()
 
 const localeOptions = [
-  { value: 'zh-CN', label: '中文', shortLabel: '中' },
+  { value: 'zh-TW', label: '中文', shortLabel: '中' },
   { value: 'en-US', label: 'English', shortLabel: 'EN' },
 ] as const
 </script>

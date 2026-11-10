@@ -17,7 +17,7 @@ from src.services.result_storage_service import save_result_record
 
 def retry_on_failure(retries=3, delay=5):
     """
-    一个通用的异步重试装饰器，增加了对HTTP错误的详细日志记录。
+    一個通用的非同步重試裝飾器，增加了對HTTP錯誤的詳細日誌記錄。
     """
     def decorator(func):
         @wraps(func)
@@ -26,30 +26,30 @@ def retry_on_failure(retries=3, delay=5):
                 try:
                     return await func(*args, **kwargs)
                 except (APIStatusError, HTTPError) as e:
-                    print(f"函数 {func.__name__} 第 {i + 1}/{retries} 次尝试失败，发生HTTP错误。")
+                    print(f"函式 {func.__name__} 第 {i + 1}/{retries} 次嘗試失敗，發生HTTP錯誤。")
                     if hasattr(e, 'status_code'):
-                        print(f"  - 状态码 (Status Code): {e.status_code}")
+                        print(f"  - 狀態碼 (Status Code): {e.status_code}")
                     if hasattr(e, 'response') and hasattr(e.response, 'text'):
                         response_text = e.response.text
                         print(
                             f"  - 返回值 (Response): {response_text[:300]}{'...' if len(response_text) > 300 else ''}")
                 except json.JSONDecodeError as e:
-                    print(f"函数 {func.__name__} 第 {i + 1}/{retries} 次尝试失败: JSON解析错误 - {e}")
+                    print(f"函式 {func.__name__} 第 {i + 1}/{retries} 次嘗試失敗: JSON解析錯誤 - {e}")
                 except Exception as e:
-                    print(f"函数 {func.__name__} 第 {i + 1}/{retries} 次尝试失败: {type(e).__name__} - {e}")
+                    print(f"函式 {func.__name__} 第 {i + 1}/{retries} 次嘗試失敗: {type(e).__name__} - {e}")
 
                 if i < retries - 1:
-                    print(f"将在 {delay} 秒后重试...")
+                    print(f"將在 {delay} 秒後重試...")
                     await asyncio.sleep(delay)
 
-            print(f"函数 {func.__name__} 在 {retries} 次尝试后彻底失败。")
+            print(f"函式 {func.__name__} 在 {retries} 次嘗試後徹底失敗。")
             return None
         return wrapper
     return decorator
 
 
-async def safe_get(data, *keys, default="暂无"):
-    """安全获取嵌套字典值"""
+async def safe_get(data, *keys, default="暫無"):
+    """安全獲取巢狀字典值"""
     for key in keys:
         try:
             data = data[key]
@@ -59,14 +59,14 @@ async def safe_get(data, *keys, default="暂无"):
 
 
 async def random_sleep(min_seconds: float, max_seconds: float):
-    """异步等待一个在指定范围内的随机时间。"""
+    """非同步等待一個在指定範圍內的隨機時間。"""
     delay = random.uniform(min_seconds, max_seconds)
-    print(f"   [延迟] 等待 {delay:.2f} 秒... (范围: {min_seconds}-{max_seconds}s)")
+    print(f"   [延遲] 等待 {delay:.2f} 秒... (範圍: {min_seconds}-{max_seconds}s)")
     await asyncio.sleep(delay)
 
 
 def log_time(message: str, prefix: str = "") -> None:
-    """在日志前加上 YY-MM-DD HH:MM:SS 时间戳的简单打印。"""
+    """在日誌前加上 YY-MM-DD HH:MM:SS 時間戳的簡單列印。"""
     try:
         ts = datetime.now().strftime(' %Y-%m-%d %H:%M:%S')
     except Exception:
@@ -75,7 +75,7 @@ def log_time(message: str, prefix: str = "") -> None:
 
 
 def sanitize_filename(value: str) -> str:
-    """生成安全的文件名片段。"""
+    """生成安全的檔名片段。"""
     if not value:
         return "task"
     cleaned = re.sub(r"[^a-zA-Z0-9_-]+", "_", value.strip())
@@ -84,14 +84,14 @@ def sanitize_filename(value: str) -> str:
 
 
 def build_task_log_path(task_id: int, task_name: str) -> str:
-    """生成任务日志路径（包含任务名）。"""
+    """生成任務日誌路徑（包含任務名）。"""
     safe_name = sanitize_filename(task_name)
     filename = f"{safe_name}_{task_id}.log"
     return os.path.join("logs", filename)
 
 
 def resolve_task_log_path(task_id: int, task_name: str) -> str:
-    """优先使用任务名生成日志路径，不存在时回退为按 ID 匹配。"""
+    """優先使用任務名生成日誌路徑，不存在時回退為按 ID 匹配。"""
     primary_path = build_task_log_path(task_id, task_name)
     if os.path.exists(primary_path):
         return primary_path
@@ -102,55 +102,16 @@ def resolve_task_log_path(task_id: int, task_name: str) -> str:
     return primary_path
 
 
-def convert_goofish_link(url: str) -> str:
-    """
-    将Goofish商品链接转换为只包含商品ID的手机端格式。
-    """
-    match_first_link = re.search(r'item\?id=(\d+)', url)
-    if match_first_link:
-        item_id = match_first_link.group(1)
-        bfp_json = f'{{"id":{item_id}}}'
-        return f"https://pages.goofish.com/sharexy?loadingVisible=false&bft=item&bfs=idlepc.item&spm=a21ybx.item.0.0&bfp={quote(bfp_json)}"
-    return url
-
-
 def get_link_unique_key(link: str) -> str:
-    """截取链接中第一个"&"之前的内容作为唯一标识依据。"""
+    """擷取連結中第一個"&"之前的內容作為唯一標識依據。"""
     return link.split('&', 1)[0]
 
 
 async def save_to_jsonl(data_record: dict, keyword: str):
-    """兼容旧调用名，实际将结果写入 SQLite。"""
+    """相容舊呼叫名，實際將結果寫入 SQLite。"""
     try:
         return await save_result_record(data_record, keyword)
     except Exception as e:
-        print(f"写入 SQLite 结果记录出错: {e}")
+        print(f"寫入 SQLite 結果記錄出錯: {e}")
         return False
 
-
-def format_registration_days(total_days: int) -> str:
-    """
-    将总天数格式化为“X年Y个月”的字符串。
-    """
-    if not isinstance(total_days, int) or total_days <= 0:
-        return '未知'
-
-    DAYS_IN_YEAR = 365.25
-    DAYS_IN_MONTH = DAYS_IN_YEAR / 12
-
-    years = math.floor(total_days / DAYS_IN_YEAR)
-    remaining_days = total_days - (years * DAYS_IN_YEAR)
-    months = round(remaining_days / DAYS_IN_MONTH)
-
-    if months == 12:
-        years += 1
-        months = 0
-
-    if years > 0 and months > 0:
-        return f"来闲鱼{years}年{months}个月"
-    elif years > 0 and months == 0:
-        return f"来闲鱼{years}年整"
-    elif years == 0 and months > 0:
-        return f"来闲鱼{months}个月"
-    else:
-        return "来闲鱼不足一个月"

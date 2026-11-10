@@ -1,5 +1,5 @@
 """
-结果黑名单规则解析与匹配。
+結果黑名單規則解析與匹配。
 """
 from __future__ import annotations
 

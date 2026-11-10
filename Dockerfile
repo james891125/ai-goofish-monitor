@@ -9,15 +9,15 @@ RUN npm run build
 # Stage 2: Build the python environment with dependencies
 FROM python:3.11-slim-bookworm AS builder
 
-# 设置环境变量以防止交互式提示
+# 設定環境變數以防止互動式提示
 ENV DEBIAN_FRONTEND=noninteractive \
     VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
-# 创建虚拟环境并安装 Python 运行时依赖
+# 建立虛擬環境並安裝 Python 執行時依賴
 RUN python3 -m venv $VIRTUAL_ENV
 COPY requirements-runtime.txt .
-RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements-runtime.txt
+RUN pip install --no-cache-dir -r requirements-runtime.txt
 
 # Stage 3: Create the final, lean image
 FROM python:3.11-slim-bookworm
@@ -29,7 +29,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     RUNNING_IN_DOCKER=true \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
-    TZ=Asia/Shanghai
+    TZ=Asia/Taipei
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 

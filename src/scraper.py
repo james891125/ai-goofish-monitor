@@ -13,7 +13,7 @@ from playwright.async_api import (
 from src.ai_handler import (
     download_all_images,
     get_ai_analysis,
-    send_ntfy_notification,
+    send_notification,
     cleanup_task_images,
 )
 from src.config import (
@@ -80,8 +80,8 @@ def _resolve_browser_channel() -> str:
     if RUNNING_IN_DOCKER:
         if LOGIN_IS_EDGE and not EDGE_DOCKER_WARNING_PRINTED:
             print(
-                "检测到 LOGIN_IS_EDGE=true，但 Docker 镜像未内置 Edge，"
-                "任务运行时将改用 Chromium。"
+                "檢測到 LOGIN_IS_EDGE=true，但 Docker 映象未內建 Edge，"
+                "任務執行時將改用 Chromium。"
             )
             EDGE_DOCKER_WARNING_PRINTED = True
         return "chromium"
@@ -99,11 +99,11 @@ CHROMIUM_CRASH_DUMPS_DIRNAME = "chromium-crashpad"
 
 
 def build_chromium_launch_args(crash_dumps_dir: str) -> list[str]:
-    """Chromium 启动参数。
+    """Chromium 啟動參數。
 
-    Docker 里的 Playwright Chromium 会拉起 chrome_crashpad_handler。数据库路径一旦落到
-    ``/``，handler 会自监控重启并占住大量内存。这里禁用 crash reporter，同时把 dump
-    目录固定到可写临时目录。
+    Docker 裡的 Playwright Chromium 會拉起 chrome_crashpad_handler。資料庫路徑一旦落到
+    ``/``，handler 會自監控重啟並佔住大量記憶體。這裡禁用 crash reporter，同時把 dump
+    目錄固定到可寫臨時目錄。
     """
     return [
         "--disable-blink-features=AutomationControlled",
@@ -126,7 +126,7 @@ def prepare_chromium_launch_args() -> list[str]:
 
 def _format_failure_reason(reason: str, limit: int = 500) -> str:
     if not reason:
-        return "未知错误"
+        return "未知錯誤"
     cleaned = " ".join(str(reason).split())
     if len(cleaned) <= limit:
         return cleaned
@@ -136,7 +136,7 @@ def _format_failure_reason(reason: str, limit: int = 500) -> str:
 async def _notify_task_failure(
     task_config: dict, reason: str, *, cookie_path: Optional[str]
 ) -> None:
-    task_name = task_config.get("task_name", "未命名任务")
+    task_name = task_config.get("task_name", "未命名任務")
     keyword = task_config.get("keyword", "")
     formatted_reason = _format_failure_reason(reason)
 
@@ -145,7 +145,7 @@ async def _notify_task_failure(
         marker in formatted_reason
         for marker in (
             "未找到可用的代理地址",
-            "未找到可用的登录状态文件",
+            "未找到可用的登入狀態檔案",
         )
     )
 
@@ -158,7 +158,7 @@ async def _notify_task_failure(
 
     if not guard_result.get("should_notify"):
         print(
-            f"[FailureGuard] 任务 '{task_name}' 失败计数 {guard_result.get('consecutive_failures')}/{FAILURE_GUARD.threshold}，暂不通知。"
+            f"[FailureGuard] 任務 '{task_name}' 失敗計數 {guard_result.get('consecutive_failures')}/{FAILURE_GUARD.threshold}，暫不通知。"
         )
         return
 
@@ -168,22 +168,22 @@ async def _notify_task_failure(
     )
 
     product_data = {
-        "商品标题": f"[任务异常] {task_name}",
-        "当前售价": "N/A",
-        "商品链接": "#",
+        "商品標題": f"[任務異常] {task_name}",
+        "目前售價": "N/A",
+        "商品連結": "#",
     }
     notify_reason = (
-        f"任务运行失败(已连续 {guard_result.get('consecutive_failures')}/{FAILURE_GUARD.threshold} 次): {formatted_reason}"
-        f"\n任务: {task_name}"
-        f"\n关键词: {keyword or 'N/A'}"
-        f"\n已自动暂停重试，暂停到: {paused_until_str}"
-        f"\n修复后(更新登录态/cookies文件)将自动恢复。"
+        f"任務執行失敗(已連續 {guard_result.get('consecutive_failures')}/{FAILURE_GUARD.threshold} 次): {formatted_reason}"
+        f"\n任務: {task_name}"
+        f"\n關鍵詞: {keyword or 'N/A'}"
+        f"\n已自動暫停重試，暫停到: {paused_until_str}"
+        f"\n修復後(更新登入態/cookies檔案)將自動恢復。"
     )
 
     try:
-        await send_ntfy_notification(product_data, notify_reason)
+        await send_notification(product_data, notify_reason)
     except Exception as e:
-        print(f"发送任务异常通知失败: {e}")
+        print(f"傳送任務異常通知失敗: {e}")
 
 
 def _as_bool(value, default: bool = False) -> bool:
@@ -338,9 +338,9 @@ def _build_context_overrides(snapshot: dict) -> dict:
     return _clean_kwargs(overrides)
 
 
-# 这些头由浏览器按请求类型生成。扩展快照里常见的是某次 XHR 的值
+# 這些頭由瀏覽器按請求型別生成。擴充功能快照裡常見的是某次 XHR 的值
 # （Sec-Fetch-Dest: empty / Sec-Fetch-Mode: cors / Accept: */*）。
-# 如果原样套到 BrowserContext，文档和脚本请求会被改成 CORS 空请求，搜索页只剩白屏。
+# 如果原樣套到 BrowserContext，文件和腳本請求會被改成 CORS 空請求，搜尋頁只剩白屏。
 _BROWSER_MANAGED_EXTRA_HEADERS = {
     "accept",
     "accept-encoding",
@@ -383,7 +383,7 @@ def _raise_if_blocked(url: str) -> None:
 
 
 async def _load_search_page(page, search_url: str) -> dict:
-    """打開搜尋頁，並攔截頁面自己發出的 search_items API 回應。"""
+    """開啟搜尋頁，並攔截頁面自己發出的 search_items API 回應。"""
     try:
         async with page.expect_response(
             is_search_response, timeout=SEARCH_RESPONSE_TIMEOUT_MS
@@ -403,7 +403,7 @@ async def _load_search_page(page, search_url: str) -> dict:
 
 
 async def _load_item_detail(context, item_url: str) -> Optional[dict]:
-    """打開商品頁並攔截詳情 API。拿不到時回傳 None，由呼叫端退回使用搜尋結果資料。"""
+    """開啟商品頁並攔截詳情 API。拿不到時回傳 None，由呼叫端退回使用搜尋結果資料。"""
     detail_page = await context.new_page()
     try:
         async with detail_page.expect_response(
@@ -432,8 +432,8 @@ async def _load_item_detail(context, item_url: str) -> Optional[dict]:
 
 async def scrape_shopee(task_config: dict, debug_limit: int = 0):
     """
-    【核心执行器】
-    根据单个任务配置，异步爬取蝦皮商品数据，并对每个新发现的商品进行实时的、独立的AI分析和通知。
+    【核心執行器】
+    根據單個任務配置，非同步爬取蝦皮商品資料，並對每個新發現的商品進行即時的、獨立的AI分析和通知。
     """
     keyword = task_config["keyword"]
     max_pages = task_config.get("max_pages", 1)
@@ -460,9 +460,9 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
     result_filename = build_result_filename(keyword)
     processed_links = load_processed_link_keys(keyword)
     if processed_links:
-        print(f"LOG: 发现已存在结果集 {result_filename}，已加载 {len(processed_links)} 个历史商品用于去重。")
+        print(f"LOG: 發現已存在結果集 {result_filename}，已載入 {len(processed_links)} 個歷史商品用於去重。")
     else:
-        print(f"LOG: 结果集 {result_filename} 当前为空，将写入新记录。")
+        print(f"LOG: 結果集 {result_filename} 目前為空，將寫入新記錄。")
 
     rotation_settings = _get_rotation_settings(task_config)
     account_items = load_state_files(rotation_settings["account_state_dir"])
@@ -528,14 +528,14 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
         stop_scraping = False
 
         if not os.path.exists(state_file):
-            raise FileNotFoundError(f"登录状态文件不存在: {state_file}")
+            raise FileNotFoundError(f"登入狀態檔案不存在: {state_file}")
 
         snapshot_data = None
         try:
             with open(state_file, "r", encoding="utf-8") as f:
                 snapshot_data = json.load(f)
         except Exception as e:
-            print(f"警告：读取登录状态文件失败，将直接按路径使用: {e}")
+            print(f"警告：讀取登入狀態檔案失敗，將直接按路徑使用: {e}")
 
         async with async_playwright() as p:
             launch_args = prepare_chromium_launch_args()
@@ -553,12 +553,12 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
             analysis_dispatcher: Optional[ItemAnalysisDispatcher] = None
 
             if isinstance(snapshot_data, dict):
-                # 新版扩展导出的增强快照，包含环境和Header
+                # 新版擴充功能匯出的增強快照，包含環境和Header
                 if any(
                     key in snapshot_data
                     for key in ("env", "headers", "page", "storage")
                 ):
-                    print(f"检测到增强浏览器快照，应用环境参数: {state_file}")
+                    print(f"檢測到增強瀏覽器快照，應用環境參數: {state_file}")
                     storage_state_arg = {"cookies": snapshot_data.get("cookies", [])}
                     context_kwargs.update(_build_context_overrides(snapshot_data))
                     extra_headers = _build_extra_headers(snapshot_data.get("headers"))
@@ -583,7 +583,7 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                 seller_loader=_load_shop_info,
                 image_downloader=download_all_images,
                 ai_analyzer=get_ai_analysis,
-                notifier=send_ntfy_notification,
+                notifier=send_notification,
                 saver=save_to_jsonl,
             )
 
@@ -640,37 +640,37 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                             stop_scraping = True
                             break
 
-                        unique_key = get_link_unique_key(item_data["商品链接"])
+                        unique_key = get_link_unique_key(item_data["商品連結"])
                         if unique_key in processed_links:
                             log_time(
-                                f"[頁內進度 {i}/{total_items_on_page}] 商品 '{item_data['商品标题'][:20]}...' 已存在，跳過。"
+                                f"[頁內進度 {i}/{total_items_on_page}] 商品 '{item_data['商品標題'][:20]}...' 已存在，跳過。"
                             )
                             continue
 
                         log_time(
-                            f"[頁內進度 {i}/{total_items_on_page}] 發現新商品，取得詳情: {item_data['商品标题'][:30]}..."
+                            f"[頁內進度 {i}/{total_items_on_page}] 發現新商品，取得詳情: {item_data['商品標題'][:30]}..."
                         )
                         await random_sleep(2, 4)
 
-                        shop_id = item_data.get("卖家ID")
+                        shop_id = item_data.get("賣家ID")
                         detail_payload = await _load_item_detail(
-                            context, item_data["商品链接"]
+                            context, item_data["商品連結"]
                         )
                         if detail_payload:
                             item_data.update(parse_item_detail(detail_payload))
                             shop_info = parse_shop_info(detail_payload)
                             if shop_info:
                                 shop_infos[str(shop_id)] = shop_info
-                                item_data["卖家昵称"] = shop_info["卖家昵称"]
+                                item_data["賣家暱稱"] = shop_info["賣家暱稱"]
                         else:
                             log_time("未取得商品詳情，改用搜尋結果中的基本資料。")
 
                         final_record = {
-                            "爬取时间": datetime.now().isoformat(),
-                            "搜索关键字": keyword,
-                            "任务名称": task_config.get("task_name", "Untitled Task"),
-                            "商品信息": item_data,
-                            "卖家信息": {},
+                            "爬取時間": datetime.now().isoformat(),
+                            "搜尋關鍵字": keyword,
+                            "任務名稱": task_config.get("task_name", "Untitled Task"),
+                            "商品資訊": item_data,
+                            "賣家資訊": {},
                         }
                         price_reference = build_market_reference(
                             keyword=keyword,
@@ -678,9 +678,9 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                             current_market_items=basic_items,
                             historical_snapshots=historical_snapshots,
                         )
-                        final_record["价格参考"] = price_reference
+                        final_record["價格參考"] = price_reference
                         final_record["price_insight"] = price_reference.get(
-                            "本商品价格位置", {}
+                            "本商品價格位置", {}
                         )
 
                         analysis_dispatcher.submit(
@@ -693,10 +693,9 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                                 keyword_rules=tuple(keyword_rules or []),
                                 final_record=final_record,
                                 seller_id=str(shop_id) if shop_id else None,
-                                zhima_credit_text=None,
                                 registration_duration_text=shop_infos.get(
                                     str(shop_id), {}
-                                ).get("卖家注册时长", "未知"),
+                                ).get("賣家註冊時長", "未知"),
                             )
                         )
 
@@ -717,25 +716,25 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                     raise LoginRequiredError(
                         f"Login required: redirected to {page.url} (cookies/state likely expired)"
                     ) from e
-                print(f"\n操作超时错误: 页面元素或网络响应未在规定时间内出现。\n{e}")
+                print(f"\n操作超時錯誤: 頁面元素或網路響應未在規定時間內出現。\n{e}")
                 raise
             except asyncio.CancelledError:
-                log_time("收到取消信号，正在终止当前爬虫任务...")
+                log_time("收到取消訊號，正在終止目前爬蟲任務...")
                 raise
             except Exception as e:
                 if type(e).__name__ == "TargetClosedError":
-                    log_time("浏览器已关闭，忽略后续异常（可能是任务被停止）。")
+                    log_time("瀏覽器已關閉，忽略後續異常（可能是任務被停止）。")
                     return processed_item_count
-                print(f"\n爬取过程中发生未知错误: {e}")
+                print(f"\n爬取過程中發生未知錯誤: {e}")
                 raise
             finally:
                 if analysis_dispatcher is not None:
-                    log_time("等待后台分析任务完成...")
+                    log_time("等待後臺分析任務完成...")
                     await analysis_dispatcher.join()
-                log_time("任务执行完毕，浏览器将在5秒后自动关闭...")
+                log_time("任務執行完畢，瀏覽器將在5秒後自動關閉...")
                 await asyncio.sleep(5)
                 if debug_limit:
-                    input("按回车键关闭浏览器...")
+                    input("按回車鍵關閉瀏覽器...")
                 await browser.close()
 
         return processed_item_count
@@ -750,7 +749,7 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
     last_state_path: Optional[str] = None
 
     # If this task is already in a paused state, skip immediately.
-    task_name_for_guard = task_config.get("task_name", "未命名任务")
+    task_name_for_guard = task_config.get("task_name", "未命名任務")
     pause_cookie_path = None
     if (
         isinstance(task_config.get("account_state_file"), str)
@@ -765,24 +764,24 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
     )
     if decision.skip:
         print(
-            f"[FailureGuard] 任务 '{task_name_for_guard}' 已暂停重试 (连续失败 {decision.consecutive_failures}/{FAILURE_GUARD.threshold})"
+            f"[FailureGuard] 任務 '{task_name_for_guard}' 已暫停重試 (連續失敗 {decision.consecutive_failures}/{FAILURE_GUARD.threshold})"
         )
         if decision.should_notify:
             try:
-                await send_ntfy_notification(
+                await send_notification(
                     {
-                        "商品标题": f"[任务暂停] {task_name_for_guard}",
-                        "当前售价": "N/A",
-                        "商品链接": "#",
+                        "商品標題": f"[任務暫停] {task_name_for_guard}",
+                        "目前售價": "N/A",
+                        "商品連結": "#",
                     },
-                    "任务处于暂停状态，将跳过执行。\n"
+                    "任務處於暫停狀態，將跳過執行。\n"
                     f"原因: {decision.reason}\n"
-                    f"连续失败: {decision.consecutive_failures}/{FAILURE_GUARD.threshold}\n"
-                    f"暂停到: {decision.paused_until.strftime('%Y-%m-%d %H:%M:%S') if decision.paused_until else 'N/A'}\n"
-                    "修复方法: 更新登录态/cookies文件后会自动恢复。",
+                    f"連續失敗: {decision.consecutive_failures}/{FAILURE_GUARD.threshold}\n"
+                    f"暫停到: {decision.paused_until.strftime('%Y-%m-%d %H:%M:%S') if decision.paused_until else 'N/A'}\n"
+                    "修復方法: 更新登入態/cookies檔案後會自動恢復。",
                 )
             except Exception as e:
-                print(f"发送任务暂停通知失败: {e}")
+                print(f"傳送任務暫停通知失敗: {e}")
 
         cleanup_task_images(task_config.get("task_name", "default"))
         return 0
@@ -806,15 +805,15 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
                 selected_proxy = _select_proxy(force_new=True)
 
         if rotation_settings["account_enabled"] and not selected_account:
-            last_error = "未找到可用的登录状态文件，无法继续执行任务。"
+            last_error = "未找到可用的登入狀態檔案，無法繼續執行任務。"
             print(last_error)
             break
         if not rotation_settings["account_enabled"] and not selected_account:
-            last_error = "未找到可用的登录状态文件，无法继续执行任务。"
+            last_error = "未找到可用的登入狀態檔案，無法繼續執行任務。"
             print(last_error)
             break
         if rotation_settings["proxy_enabled"] and not selected_proxy:
-            last_error = "未找到可用的代理地址，无法继续执行任务。"
+            last_error = "未找到可用的代理地址，無法繼續執行任務。"
             print(last_error)
             break
 
@@ -822,9 +821,9 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
         last_state_path = state_path
         proxy_server = selected_proxy.value if selected_proxy else None
         if rotation_settings["account_enabled"]:
-            print(f"账号轮换：使用登录状态 {state_path}")
+            print(f"帳號輪換：使用登入狀態 {state_path}")
         if rotation_settings["proxy_enabled"] and proxy_server:
-            print(f"IP 轮换：使用代理 {proxy_server}")
+            print(f"IP 輪換：使用代理 {proxy_server}")
 
         try:
             processed_item_count += await _run_scrape_attempt(state_path, proxy_server)
@@ -833,23 +832,23 @@ async def scrape_shopee(task_config: dict, debug_limit: int = 0):
             break
         except LoginRequiredError as e:
             last_error = str(e)
-            print(f"检测到登录失效/重定向: {e}")
+            print(f"檢測到登入失效/重定向: {e}")
             break
         except RiskControlError as e:
             last_error = str(e)
-            print(f"检测到风控或验证触发: {e}")
-            # 风控验证通常不是简单轮换能解决的，避免无意义重试。
+            print(f"檢測到風控或驗證觸發: {e}")
+            # 風控驗證通常不是簡單輪換能解決的，避免無意義重試。
             break
         except Exception as e:
             last_error = f"{type(e).__name__}: {e}"
-            print(f"本次尝试失败: {last_error}")
+            print(f"本次嘗試失敗: {last_error}")
             if attempt < attempt_limit:
-                print("将尝试轮换账号/IP 后重试...")
+                print("將嘗試輪換帳號/IP 後重試...")
 
     if last_error:
         await _notify_task_failure(task_config, last_error, cookie_path=last_state_path)
 
-    # 清理任务图片目录
+    # 清理任務圖片目錄
     cleanup_task_images(task_config.get("task_name", "default"))
 
     return processed_item_count

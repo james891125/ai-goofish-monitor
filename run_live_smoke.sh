@@ -24,19 +24,19 @@ TEST_TARGETS=(
 usage() {
     cat <<'EOF'
 用法:
-  ./run_live_smoke.sh [选项] [-- pytest额外参数]
+  ./run_live_smoke.sh [選項] [-- pytest額外參數]
 
-选项:
-  --keyword <关键词>           覆盖 LIVE_TEST_KEYWORD
-  --account-file <路径>        覆盖 LIVE_TEST_ACCOUNT_STATE_FILE
-  --task-name <名称>           覆盖 LIVE_TEST_TASK_NAME
-  --timeout <秒>               覆盖 LIVE_TIMEOUT_SECONDS
-  --min-items <数量>           覆盖 LIVE_EXPECT_MIN_ITEMS
-  --debug-limit <数量>         覆盖 LIVE_TEST_DEBUG_LIMIT（默认 1，仅分析前 N 个新商品）
-  --with-generation            显式开启 live_slow（默认已开启）
-  --without-generation         关闭 live_slow，只执行主 smoke
-  --dry-run                    只打印配置和将执行的命令，不真正运行
-  --help                       显示帮助
+選項:
+  --keyword <關鍵詞>           覆蓋 LIVE_TEST_KEYWORD
+  --account-file <路徑>        覆蓋 LIVE_TEST_ACCOUNT_STATE_FILE
+  --task-name <名稱>           覆蓋 LIVE_TEST_TASK_NAME
+  --timeout <秒>               覆蓋 LIVE_TIMEOUT_SECONDS
+  --min-items <數量>           覆蓋 LIVE_EXPECT_MIN_ITEMS
+  --debug-limit <數量>         覆蓋 LIVE_TEST_DEBUG_LIMIT（預設 1，僅分析前 N 個新商品）
+  --with-generation            顯式開啟 live_slow（預設已開啟）
+  --without-generation         關閉 live_slow，只執行主 smoke
+  --dry-run                    只列印配置和將執行的命令，不真正執行
+  --help                       顯示幫助
 
 示例:
   ./run_live_smoke.sh
@@ -44,12 +44,12 @@ usage() {
   ./run_live_smoke.sh --without-generation
   ./run_live_smoke.sh -- -k live_real_traffic
 
-说明:
-  0. 默认先执行任务创建 CRUD 集成测试，再执行 tests/live 真实流量 smoke
-  1. 脚本会自动设置 RUN_LIVE_TESTS=1
-  2. 若未设置 LIVE_TEST_ACCOUNT_STATE_FILE，会自动尝试使用 state/ 下第一个 *.json
-  3. 默认使用 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1，避免本机第三方 pytest 插件干扰
-  4. 默认设置 LIVE_TEST_DEBUG_LIMIT=1，使冒烟测试只抓取并分析 1 个新商品
+說明:
+  0. 預設先執行任務建立 CRUD 整合測試，再執行 tests/live 真實流量 smoke
+  1. 腳本會自動設定 RUN_LIVE_TESTS=1
+  2. 若未設定 LIVE_TEST_ACCOUNT_STATE_FILE，會自動嘗試使用 state/ 下第一個 *.json
+  3. 預設使用 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1，避免本機第三方 pytest 外掛干擾
+  4. 預設設定 LIVE_TEST_DEBUG_LIMIT=1，使冒煙測試只抓取並分析 1 個新商品
 EOF
 }
 
@@ -57,7 +57,7 @@ require_value() {
     local option="$1"
     local value="${2:-}"
     if [[ -z "$value" ]]; then
-        echo -e "${RED}错误:${NC} ${option} 需要一个值"
+        echo -e "${RED}錯誤:${NC} ${option} 需要一個值"
         exit 1
     fi
 }
@@ -132,17 +132,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 if ! command -v "$PYTHON_CMD" >/dev/null 2>&1; then
-    echo -e "${RED}错误:${NC} 未找到 Python 命令: $PYTHON_CMD"
+    echo -e "${RED}錯誤:${NC} 未找到 Python 命令: $PYTHON_CMD"
     exit 1
 fi
 
 if ! "$PYTHON_CMD" -m pytest --version >/dev/null 2>&1; then
-    echo -e "${RED}错误:${NC} 当前 Python 环境缺少 pytest"
+    echo -e "${RED}錯誤:${NC} 目前 Python 環境缺少 pytest"
     exit 1
 fi
 
 if ! "$PYTHON_CMD" -m playwright --version >/dev/null 2>&1; then
-    echo -e "${RED}错误:${NC} 当前 Python 环境缺少 Playwright，请先安装浏览器依赖"
+    echo -e "${RED}錯誤:${NC} 目前 Python 環境缺少 Playwright，請先安裝瀏覽器依賴"
     exit 1
 fi
 
@@ -162,12 +162,12 @@ if [[ -z "${LIVE_TEST_ACCOUNT_STATE_FILE:-}" ]]; then
 fi
 
 if [[ -z "${LIVE_TEST_ACCOUNT_STATE_FILE:-}" ]]; then
-    echo -e "${RED}错误:${NC} 未找到 live 登录态文件。请使用 --account-file 指定，或在 state/ 下放置 *.json"
+    echo -e "${RED}錯誤:${NC} 未找到 live 登入態檔案。請使用 --account-file 指定，或在 state/ 下放置 *.json"
     exit 1
 fi
 
 if [[ ! -f "${LIVE_TEST_ACCOUNT_STATE_FILE}" ]]; then
-    echo -e "${RED}错误:${NC} 登录态文件不存在: ${LIVE_TEST_ACCOUNT_STATE_FILE}"
+    echo -e "${RED}錯誤:${NC} 登入態檔案不存在: ${LIVE_TEST_ACCOUNT_STATE_FILE}"
     exit 1
 fi
 
@@ -180,23 +180,23 @@ else
 fi
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}闲鱼真实流量 Live Smoke 一键测试${NC}"
+echo -e "${GREEN}蝦皮真實流量 Live Smoke 一鍵測試${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo -e "${YELLOW}Python:${NC} $PYTHON_CMD"
-echo -e "${YELLOW}关键词:${NC} ${LIVE_TEST_KEYWORD}"
-echo -e "${YELLOW}任务名:${NC} ${LIVE_TEST_TASK_NAME}"
-echo -e "${YELLOW}登录态:${NC} ${LIVE_TEST_ACCOUNT_STATE_FILE}"
-echo -e "${YELLOW}最少结果数:${NC} ${LIVE_EXPECT_MIN_ITEMS}"
+echo -e "${YELLOW}關鍵詞:${NC} ${LIVE_TEST_KEYWORD}"
+echo -e "${YELLOW}任務名:${NC} ${LIVE_TEST_TASK_NAME}"
+echo -e "${YELLOW}登入態:${NC} ${LIVE_TEST_ACCOUNT_STATE_FILE}"
+echo -e "${YELLOW}最少結果數:${NC} ${LIVE_EXPECT_MIN_ITEMS}"
 echo -e "${YELLOW}抓取/分析商品上限:${NC} ${LIVE_TEST_DEBUG_LIMIT}"
-echo -e "${YELLOW}超时(秒):${NC} ${LIVE_TIMEOUT_SECONDS}"
-echo -e "${YELLOW}任务生成慢用例:${NC} ${LIVE_ENABLE_TASK_GENERATION}"
-echo -e "${YELLOW}任务创建前置用例:${NC} ${TASK_CREATE_TEST}"
+echo -e "${YELLOW}超時(秒):${NC} ${LIVE_TIMEOUT_SECONDS}"
+echo -e "${YELLOW}任務生成慢用例:${NC} ${LIVE_ENABLE_TASK_GENERATION}"
+echo -e "${YELLOW}任務建立前置用例:${NC} ${TASK_CREATE_TEST}"
 if [[ -n "$MARK_EXPRESSION" ]]; then
     echo -e "${YELLOW}Pytest Marker:${NC} ${MARK_EXPRESSION}"
 else
     echo -e "${YELLOW}Pytest Marker:${NC} <none>"
 fi
-echo -e "${YELLOW}禁用插件自动加载:${NC} ${PYTEST_DISABLE_PLUGIN_AUTOLOAD}"
+echo -e "${YELLOW}禁用外掛自動載入:${NC} ${PYTEST_DISABLE_PLUGIN_AUTOLOAD}"
 
 CMD=(
     "$PYTHON_CMD" -m pytest
@@ -212,10 +212,10 @@ if [[ ${#PYTEST_ARGS[@]} -gt 0 ]]; then
     CMD+=("${PYTEST_ARGS[@]}")
 fi
 
-echo -e "${YELLOW}执行命令:${NC} ${CMD[*]}"
+echo -e "${YELLOW}執行命令:${NC} ${CMD[*]}"
 
 if [[ "$DRY_RUN" == "true" ]]; then
-    echo -e "${GREEN}Dry run 完成，未实际执行测试。${NC}"
+    echo -e "${GREEN}Dry run 完成，未實際執行測試。${NC}"
     exit 0
 fi
 

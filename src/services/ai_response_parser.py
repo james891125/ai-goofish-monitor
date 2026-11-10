@@ -1,18 +1,18 @@
 """
-AI 响应解析工具
+AI 響應解析工具
 """
 import json
 from typing import Any
 
 
 class EmptyAIResponseError(ValueError):
-    """AI 返回了空内容。"""
+    """AI 返回了空內容。"""
 
 
 def extract_ai_response_content(response: Any) -> str:
-    """从不同形态的 AI 响应中提取文本内容。"""
+    """從不同形態的 AI 響應中提取文字內容。"""
     if response is None:
-        raise EmptyAIResponseError("AI响应对象为空。")
+        raise EmptyAIResponseError("AI響應物件為空。")
 
     if isinstance(response, (bytes, bytearray)):
         text = response.decode("utf-8", errors="replace")
@@ -29,10 +29,10 @@ def extract_ai_response_content(response: Any) -> str:
     if choices:
         message = getattr(choices[0], "message", None)
         if message is None:
-            raise EmptyAIResponseError("AI响应缺少 message。")
+            raise EmptyAIResponseError("AI響應缺少 message。")
         content = getattr(message, "content", None)
         
-        # 智谱等 OpenAI 兼容网关在某些模式下会把输出放在 reasoning_content 而非 content
+        # 智譜等 OpenAI 相容閘道在某些模式下會把輸出放在 reasoning_content 而非 content
         try:
             return _normalize_text_content(_coerce_content_parts(content))
         except EmptyAIResponseError:
@@ -41,11 +41,11 @@ def extract_ai_response_content(response: Any) -> str:
                 return _normalize_text_content(_coerce_content_parts(reasoning_content))
             raise
 
-    raise ValueError(f"无法识别的AI响应类型: {type(response).__name__}")
+    raise ValueError(f"無法識別的AI響應型別: {type(response).__name__}")
 
 
 def parse_ai_response_json(content: str) -> dict:
-    """解析 AI 文本响应中的 JSON。"""
+    """解析 AI 文字響應中的 JSON。"""
     cleaned = _strip_code_fences(content)
     try:
         return json.loads(cleaned)
@@ -61,7 +61,7 @@ def _coerce_content_parts(content: Any) -> str:
     if isinstance(content, (bytes, bytearray)):
         return content.decode("utf-8", errors="replace")
     if not isinstance(content, list):
-        raise ValueError(f"AI响应内容类型不受支持: {type(content).__name__}")
+        raise ValueError(f"AI響應內容型別不受支援: {type(content).__name__}")
 
     parts: list[str] = []
     for item in content:
@@ -82,7 +82,7 @@ def _coerce_content_parts(content: Any) -> str:
 def _normalize_text_content(content: str) -> str:
     text = str(content).strip()
     if not text:
-        raise EmptyAIResponseError("AI响应内容为空。")
+        raise EmptyAIResponseError("AI響應內容為空。")
     return text
 
 

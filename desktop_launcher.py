@@ -1,6 +1,6 @@
 """
-桌面启动入口
-使用 PyInstaller 打包后作为单一可执行文件的入口，自动启动 FastAPI 服务并打开浏览器。
+桌面啟動入口
+使用 PyInstaller 打包後作為單一可執行檔案的入口，自動啟動 FastAPI 服務並開啟瀏覽器。
 """
 import os
 import sys
@@ -10,25 +10,25 @@ from pathlib import Path
 
 import uvicorn
 
-# PyInstaller 运行时资源目录：_MEIPASS；未打包时则为当前文件所在目录
+# PyInstaller 執行時資源目錄：_MEIPASS；未打包時則為目前檔案所在目錄
 BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 
 
 def _prepare_environment() -> None:
-    """确保工作目录和模块路径正确"""
+    """確保工作目錄和模組路徑正確"""
     os.chdir(BASE_DIR)
     if str(BASE_DIR) not in sys.path:
         sys.path.insert(0, str(BASE_DIR))
 
 
 def run_app() -> None:
-    """启动 FastAPI 应用并自动打开浏览器"""
+    """啟動 FastAPI 應用並自動開啟瀏覽器"""
     _prepare_environment()
 
     from src.app import app
     from src.infrastructure.config.settings import settings
 
-    # 先尝试打开浏览器，稍等服务起来
+    # 先嚐試開啟瀏覽器，稍等服務起來
     url = f"http://127.0.0.1:{settings.server_port}"
     webbrowser.open(url)
     time.sleep(0.5)

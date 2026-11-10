@@ -52,7 +52,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // 自定义 AI 风格色
+        // 自定義 AI 風格色
         ai: {
           primary: "#3b82f6",
           success: "#10b981",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,9 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import regionTree from '@/data/goofishRegions.json'
 
-type RegionTree = Record<string, Record<string, string[]>>
+// 臺灣 22 縣市；值會拿去比對蝦皮商品的「出貨地」文字
+const TAIWAN_REGIONS = [
+  '台北市', '新北市', '基隆市', '桃園市', '新竹市', '新竹縣', '苗栗縣',
+  '台中市', '彰化縣', '南投縣', '雲林縣', '嘉義市', '嘉義縣',
+  '台南市', '高雄市', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣',
+  '澎湖縣', '金門縣', '連江縣',
+]
 
 const props = defineProps<{
   modelValue?: string | null
@@ -22,151 +27,31 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n()
 
-const tree = regionTree as RegionTree
-const provinceKeys = Object.keys(tree)
-const selectedProvince = ref('')
-const selectedCity = ref('')
-const selectedDistrict = ref('')
-const lastSyncedPath = ref('')
-
-const provinceOptions = computed(() => provinceKeys)
-const cityOptions = computed(() => {
-  return selectedProvince.value ? Object.keys(tree[selectedProvince.value] || {}) : []
-})
-const districtOptions = computed(() => {
-  if (!selectedProvince.value || !selectedCity.value) return []
-  return tree[selectedProvince.value]?.[selectedCity.value] || []
-})
-const currentPath = computed(() => {
-  return [selectedProvince.value, selectedCity.value, selectedDistrict.value]
-    .filter((item) => item.length > 0)
-    .join('/')
-})
-
-function normalizePath(value: string | null | undefined): string {
-  return String(value || '')
-    .split('/')
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-    .join('/')
-}
-
-function isFullOption(value: string): boolean {
-  return value.startsWith('全') || value === '全国'
-}
-
-function syncFromModel() {
-  const normalized = normalizePath(props.modelValue)
-  if (normalized === lastSyncedPath.value) return
-  lastSyncedPath.value = normalized
-
-  const parts = normalized.split('/').filter(Boolean)
-  selectedProvince.value = parts[0] || ''
-  selectedCity.value = parts[1] || ''
-  selectedDistrict.value = parts[2] || ''
-}
-
-function emitCurrentPath() {
-  emit('update:modelValue', currentPath.value)
-}
-
-function clearSelection() {
-  selectedProvince.value = ''
-  selectedCity.value = ''
-  selectedDistrict.value = ''
-  emit('update:modelValue', '')
-}
-
-function handleProvinceChange(value: string) {
-  selectedProvince.value = value
-  selectedCity.value = ''
-  selectedDistrict.value = ''
-
-  const firstCity = cityOptions.value[0] || ''
-  if (value && value !== '全国' && isFullOption(firstCity)) {
-    selectedCity.value = firstCity
-  }
-  emitCurrentPath()
-}
-
-function handleCityChange(value: string) {
-  selectedCity.value = value
-  selectedDistrict.value = ''
-
-  const firstDistrict = districtOptions.value[0] || ''
-  if (isFullOption(firstDistrict)) {
-    selectedDistrict.value = firstDistrict
-  }
-  emitCurrentPath()
-}
-
-function handleDistrictChange(value: string) {
-  selectedDistrict.value = value
-  emitCurrentPath()
-}
-
-watch(() => props.modelValue, syncFromModel, { immediate: true })
+const current = computed(() => String(props.modelValue || '').trim())
 </script>
 
 <template>
   <div class="space-y-3">
-    <div class="grid gap-2 md:grid-cols-3">
-      <Select
-        :model-value="selectedProvince"
-        @update:model-value="(value) => handleProvinceChange(String(value || ''))"
-      >
-        <SelectTrigger>
-          <SelectValue :placeholder="t('tasks.region.provincePlaceholder')" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem v-for="option in provinceOptions" :key="option" :value="option">
-            {{ option }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select
-        :disabled="!selectedProvince || (cityOptions.length === 0 && selectedProvince !== '全国')"
-        :model-value="selectedCity"
-        @update:model-value="(value) => handleCityChange(String(value || ''))"
-      >
-        <SelectTrigger>
-          <SelectValue :placeholder="t('tasks.region.cityPlaceholder')" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem v-for="option in cityOptions" :key="option" :value="option">
-            {{ option }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select
-        :disabled="!selectedCity || (districtOptions.length === 0 && !isFullOption(selectedCity))"
-        :model-value="selectedDistrict"
-        @update:model-value="(value) => handleDistrictChange(String(value || ''))"
-      >
-        <SelectTrigger>
-          <SelectValue :placeholder="t('tasks.region.districtPlaceholder')" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem v-for="option in districtOptions" :key="option" :value="option">
-            {{ option }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-      <span>{{ t('tasks.region.helper') }}</span>
-    </div>
-
-    <div class="flex flex-wrap gap-2">
-      <Button type="button" variant="ghost" size="sm" @click="clearSelection">
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="min-w-[12rem] flex-1">
+        <Select
+          :model-value="current"
+          @update:model-value="(value) => emit('update:modelValue', String(value || ''))"
+        >
+          <SelectTrigger>
+            <SelectValue :placeholder="t('tasks.region.provincePlaceholder')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="option in TAIWAN_REGIONS" :key="option" :value="option">
+              {{ option }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Button type="button" variant="ghost" size="sm" @click="emit('update:modelValue', '')">
         {{ t('tasks.region.clear') }}
       </Button>
-      <span v-if="currentPath" class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-        {{ t('tasks.region.current', { path: currentPath }) }}
-      </span>
     </div>
+    <p class="text-xs text-slate-500">{{ t('tasks.region.helper') }}</p>
   </div>
 </template>

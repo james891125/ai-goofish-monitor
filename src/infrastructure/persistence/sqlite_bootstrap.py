@@ -1,5 +1,5 @@
 """
-SQLite 启动初始化与旧文件迁移。
+SQLite 啟動初始化與舊檔案遷移。
 """
 from __future__ import annotations
 
@@ -172,9 +172,9 @@ def _import_price_snapshots_if_needed(conn, legacy_price_history_dir: str) -> No
 
 
 def _insert_result_record(conn, record: dict, *, keyword: str, filename: str) -> None:
-    item = record.get("商品信息", {}) or {}
+    item = record.get("商品資訊", {}) or {}
     analysis = record.get("ai_analysis", {}) or {}
-    link = str(item.get("商品链接") or "")
+    link = str(item.get("商品連結") or "")
     if link:
         link_unique_key = link.split("&", 1)[0]
     else:
@@ -185,7 +185,7 @@ def _insert_result_record(conn, record: dict, *, keyword: str, filename: str) ->
             link_unique_key = "hash:" + hashlib.sha1(
                 json.dumps(record, ensure_ascii=False, sort_keys=True).encode("utf-8")
             ).hexdigest()
-    final_keyword = str(record.get("搜索关键字") or keyword)
+    final_keyword = str(record.get("搜尋關鍵字") or keyword)
     result_filename = filename or build_result_filename(final_keyword)
     keyword_hit_count = analysis.get("keyword_hit_count", 0)
     try:
@@ -204,16 +204,16 @@ def _insert_result_record(conn, record: dict, *, keyword: str, filename: str) ->
         (
             result_filename,
             final_keyword,
-            record.get("任务名称", ""),
-            record.get("爬取时间", ""),
-            item.get("发布时间"),
-            _parse_price(item.get("当前售价")),
-            item.get("当前售价"),
+            record.get("任務名稱", ""),
+            record.get("爬取時間", ""),
+            item.get("釋出時間"),
+            _parse_price(item.get("目前售價")),
+            item.get("目前售價"),
             item.get("商品ID"),
-            item.get("商品标题"),
+            item.get("商品標題"),
             link,
             link_unique_key,
-            (record.get("卖家信息", {}) or {}).get("卖家昵称") or item.get("卖家昵称"),
+            (record.get("賣家資訊", {}) or {}).get("賣家暱稱") or item.get("賣家暱稱"),
             _as_int(analysis.get("is_recommended", False)),
             analysis.get("analysis_source"),
             keyword_hit_count,
@@ -268,9 +268,9 @@ def _parse_price(value):
         return round(float(value), 2)
 
     text = str(value).strip().replace("¥", "").replace(",", "")
-    if not text or text in {"价格异常", "暂无", "-", "N/A"}:
+    if not text or text in {"價格異常", "暫無", "-", "N/A"}:
         return None
-    if text.endswith("万"):
+    if text.endswith("萬"):
         text = str(float(text[:-1]) * 10000)
     try:
         return round(float(text), 2)

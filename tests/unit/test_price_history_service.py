@@ -13,51 +13,51 @@ def test_record_market_snapshots_and_build_price_history_insights(tmp_path, monk
     run1_items = [
         {
             "商品ID": "1001",
-            "商品标题": "Sony A7M4 单机",
-            "当前售价": "¥10000",
-            "商品标签": ["验货宝"],
-            "发货地区": "上海",
-            "卖家昵称": "卖家A",
-            "商品链接": "https://www.goofish.com/item?id=1001",
-            "发布时间": "2026-01-01 09:00",
+            "商品標題": "Sony A7M4 單機",
+            "目前售價": "$10000",
+            "商品標籤": ["驗貨寶"],
+            "出貨地區": "台北",
+            "賣家暱稱": "賣家A",
+            "商品連結": "https://shopee.tw/product/1/1001",
+            "釋出時間": "2026-01-01 09:00",
         },
         {
             "商品ID": "1002",
-            "商品标题": "Sony A7M4 套机",
-            "当前售价": "¥12000",
-            "商品标签": ["包邮"],
-            "发货地区": "杭州",
-            "卖家昵称": "卖家B",
-            "商品链接": "https://www.goofish.com/item?id=1002",
-            "发布时间": "2026-01-01 10:00",
+            "商品標題": "Sony A7M4 套機",
+            "目前售價": "$12000",
+            "商品標籤": ["包郵"],
+            "出貨地區": "高雄",
+            "賣家暱稱": "賣家B",
+            "商品連結": "https://shopee.tw/product/1/1002",
+            "釋出時間": "2026-01-01 10:00",
         },
     ]
     run2_items = [
         {
             "商品ID": "1001",
-            "商品标题": "Sony A7M4 单机",
-            "当前售价": "¥9500",
-            "商品标签": ["验货宝"],
-            "发货地区": "上海",
-            "卖家昵称": "卖家A",
-            "商品链接": "https://www.goofish.com/item?id=1001",
-            "发布时间": "2026-01-02 09:00",
+            "商品標題": "Sony A7M4 單機",
+            "目前售價": "$9500",
+            "商品標籤": ["驗貨寶"],
+            "出貨地區": "台北",
+            "賣家暱稱": "賣家A",
+            "商品連結": "https://shopee.tw/product/1/1001",
+            "釋出時間": "2026-01-02 09:00",
         },
         {
             "商品ID": "1003",
-            "商品标题": "Sony A7M4 全套",
-            "当前售价": "¥13000",
-            "商品标签": ["同城"],
-            "发货地区": "南京",
-            "卖家昵称": "卖家C",
-            "商品链接": "https://www.goofish.com/item?id=1003",
-            "发布时间": "2026-01-02 11:00",
+            "商品標題": "Sony A7M4 全套",
+            "目前售價": "$13000",
+            "商品標籤": ["同城"],
+            "出貨地區": "南京",
+            "賣家暱稱": "賣家C",
+            "商品連結": "https://shopee.tw/product/1/1003",
+            "釋出時間": "2026-01-02 11:00",
         },
     ]
 
     inserted_run1 = record_market_snapshots(
         keyword="sony a7m4",
-        task_name="Sony A7M4 监控",
+        task_name="Sony A7M4 監控",
         items=run1_items,
         run_id="run-1",
         snapshot_time="2026-01-01T12:00:00",
@@ -67,7 +67,7 @@ def test_record_market_snapshots_and_build_price_history_insights(tmp_path, monk
 
     inserted_run2 = record_market_snapshots(
         keyword="sony a7m4",
-        task_name="Sony A7M4 监控",
+        task_name="Sony A7M4 監控",
         items=run2_items,
         run_id="run-2",
         snapshot_time="2026-01-02T12:00:00",
@@ -96,4 +96,4 @@ def test_record_market_snapshots_and_build_price_history_insights(tmp_path, monk
     assert item_context["min_price"] == 9500.0
     assert item_context["max_price"] == 10000.0
     assert item_context["price_change_amount"] == -500.0
-    assert item_context["deal_label"] == "高性价比"
+    assert item_context["deal_label"] == "高價效比"

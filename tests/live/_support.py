@@ -18,14 +18,6 @@ DEFAULT_LIVE_KEYWORD = "MacBook Pro M2"
 DEFAULT_LIVE_TIMEOUT_SECONDS = 180
 HEALTH_TIMEOUT_SECONDS = 60
 NOTIFICATION_ENV_KEYS = (
-    "NTFY_TOPIC_URL",
-    "GOTIFY_URL",
-    "GOTIFY_TOKEN",
-    "BARK_URL",
-    "WX_BOT_URL",
-    "TELEGRAM_BOT_TOKEN",
-    "TELEGRAM_CHAT_ID",
-    "TELEGRAM_API_BASE_URL",
     "WEBHOOK_URL",
     "WEBHOOK_METHOD",
     "WEBHOOK_HEADERS",
@@ -107,7 +99,7 @@ def resolve_account_source(repo_root: Path) -> Path:
     candidates = sorted(state_dir.glob("*.json"))
     if not candidates:
         raise FileNotFoundError(
-            "LIVE_TEST_ACCOUNT_STATE_FILE 未设置，且 state/ 下没有可用 JSON 登录态文件。"
+            "LIVE_TEST_ACCOUNT_STATE_FILE 未設定，且 state/ 下沒有可用 JSON 登入態檔案。"
         )
     return candidates[0]
 
@@ -202,7 +194,7 @@ def wait_for_server_ready(base_url: str, process: subprocess.Popen, log_path: Pa
     if log_path.exists():
         log_excerpt = log_path.read_text(encoding="utf-8", errors="ignore")[-4000:]
     raise RuntimeError(
-        "Live app 未在预期时间内启动。"
+        "Live app 未在預期時間內啟動。"
         f" last_error={last_error}\nserver_log={log_path}\n{log_excerpt}"
     )
 

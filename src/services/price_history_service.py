@@ -1,5 +1,5 @@
 """
-价格历史记录与聚合服务
+價格歷史記錄與聚合服務
 """
 from __future__ import annotations
 
@@ -43,9 +43,9 @@ def parse_price_value(value: Any) -> Optional[float]:
     # 蝦皮多規格商品會顯示「$100 - $200」，以最低價為準
     text = text.split(" - ", 1)[0]
     text = text.replace("NT$", "").replace("$", "").replace("¥", "").replace(",", "").strip()
-    if not text or text in {"价格异常", "暂无", "-", "N/A"}:
+    if not text or text in {"價格異常", "暫無", "-", "N/A"}:
         return None
-    if text.endswith("万"):
+    if text.endswith("萬"):
         text = str(float(text[:-1]) * 10000)
     try:
         return round(float(text), 2)
@@ -72,9 +72,9 @@ def _build_snapshot_record(
     snapshot_time: str,
 ) -> Optional[dict]:
     item_id = str(item.get("商品ID") or "").strip()
-    link = str(item.get("商品链接") or "").strip()
+    link = str(item.get("商品連結") or "").strip()
     unique_id = item_id or link
-    price_value = parse_price_value(item.get("当前售价"))
+    price_value = parse_price_value(item.get("目前售價"))
     if not unique_id or price_value is None:
         return None
 
@@ -85,13 +85,13 @@ def _build_snapshot_record(
         "task_name": task_name,
         "keyword": keyword,
         "item_id": unique_id,
-        "title": item.get("商品标题") or "",
+        "title": item.get("商品標題") or "",
         "price": price_value,
-        "price_display": item.get("当前售价") or "",
-        "tags": item.get("商品标签") or [],
-        "region": item.get("发货地区") or "",
-        "seller": item.get("卖家昵称") or "",
-        "publish_time": item.get("发布时间") or "",
+        "price_display": item.get("目前售價") or "",
+        "tags": item.get("商品標籤") or [],
+        "region": item.get("出貨地區") or "",
+        "seller": item.get("賣家暱稱") or "",
+        "publish_time": item.get("釋出時間") or "",
         "link": link,
     }
 
@@ -265,12 +265,12 @@ def _recent_window_snapshots(snapshots: list[dict], window_days: int) -> list[di
 
 def _resolve_deal_label(score: int) -> str:
     if score >= 65:
-        return "高性价比"
+        return "高價效比"
     if score >= 50:
-        return "值得关注"
+        return "值得關注"
     if score >= 40:
-        return "价格正常"
-    return "价格偏高"
+        return "價格正常"
+    return "價格偏高"
 
 
 def build_item_price_context(
@@ -281,11 +281,11 @@ def build_item_price_context(
     market_snapshots: Optional[list[dict]] = None,
 ) -> dict:
     if not item_id:
-        return {"observation_count": 0, "deal_score": None, "deal_label": "暂无数据"}
+        return {"observation_count": 0, "deal_score": None, "deal_label": "暫無資料"}
 
     item_snapshots = [record for record in snapshots if str(record.get("item_id")) == str(item_id)]
     if not item_snapshots:
-        return {"observation_count": 0, "deal_score": None, "deal_label": "暂无数据"}
+        return {"observation_count": 0, "deal_score": None, "deal_label": "暫無資料"}
 
     latest_item_snapshot = item_snapshots[-1]
     price_now = current_price if current_price is not None else parse_price_value(latest_item_snapshot.get("price"))
@@ -344,7 +344,7 @@ def build_market_reference(
 ) -> dict:
     current_market_records = []
     for market_item in current_market_items:
-        price = parse_price_value(market_item.get("当前售价"))
+        price = parse_price_value(market_item.get("目前售價"))
         if price is None:
             continue
         current_market_records.append({"price": price})
@@ -354,13 +354,13 @@ def build_market_reference(
     item_context = build_item_price_context(
         historical_snapshots,
         item_id=str(item.get("商品ID") or ""),
-        current_price=parse_price_value(item.get("当前售价")),
+        current_price=parse_price_value(item.get("目前售價")),
     )
     return {
-        "当前搜索样本": market_snapshot,
-        "历史价格概览": history_summary,
-        "本商品价格位置": item_context,
-        "关键词": keyword,
+        "目前搜尋樣本": market_snapshot,
+        "歷史價格概覽": history_summary,
+        "本商品價格位置": item_context,
+        "關鍵詞": keyword,
     }
 
 

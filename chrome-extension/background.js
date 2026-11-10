@@ -24,14 +24,14 @@ function headersArrayToObject(headers = []) {
   return result;
 }
 
-async function getActiveGoofishTab() {
+async function getActiveShopeeTab() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs?.[0];
   if (!tab || !tab.id || !tab.url) {
-    throw new Error("未找到活动标签页");
+    throw new Error("未找到活動標籤頁");
   }
   if (!/^https:\/\/([^/]+\.)?shopee\.tw\//.test(tab.url)) {
-    throw new Error("請先打開 shopee.tw 頁面並登入");
+    throw new Error("請先開啟 shopee.tw 頁面並登入");
   }
   return tab;
 }
@@ -111,7 +111,7 @@ async function capturePageData(tabId) {
   });
 
   if (!result || !result.result) {
-    throw new Error("无法获取页面信息");
+    throw new Error("無法獲取頁面資訊");
   }
 
   return result.result;
@@ -210,7 +210,7 @@ async function captureHeaders(tabId) {
     };
 
     const extraInfo = ["requestHeaders"];
-    // extraHeaders 提供更完整的 header 视图，在新版本 Chrome 需要显式声明
+    // extraHeaders 提供更完整的 header 檢視，在新版本 Chrome 需要顯式宣告
     extraInfo.push("extraHeaders");
 
     chrome.webRequest.onBeforeSendHeaders.addListener(
@@ -221,7 +221,7 @@ async function captureHeaders(tabId) {
 
     const timer = setTimeout(() => cleanup(null), 2000);
 
-    // 触发一次轻量请求以获取真实请求头
+    // 觸發一次輕量請求以獲取真實請求頭
     chrome.scripting
       .executeScript({
         target: { tabId },
@@ -238,7 +238,7 @@ async function captureHeaders(tabId) {
         },
       })
       .catch(() => {
-        // 如果注入失败，继续等待可能已有的请求
+        // 如果注入失敗，繼續等待可能已有的請求
       });
   });
 }
@@ -258,7 +258,7 @@ async function captureCookies(url) {
 }
 
 async function buildSnapshot() {
-  const tab = await getActiveGoofishTab();
+  const tab = await getActiveShopeeTab();
   const pageData = await capturePageData(tab.id);
   const headers = await captureHeaders(tab.id);
   const cookies = await captureCookies(new URL(tab.url).origin);

@@ -2,6 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { formatDateTime } from '@/i18n'
+import { Badge } from '@/components/ui/badge'
 import { listAccounts, getAccount, createAccount, updateAccount, deleteAccount, type AccountItem } from '@/api/accounts'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,15 +20,56 @@ const isLoading = ref(false)
 const isSaving = ref(false)
 const router = useRouter()
 
-const isCreateDialogOpen = ref(false)
 const isEditDialogOpen = ref(false)
 const isDeleteDialogOpen = ref(false)
 
-const newName = ref('')
-const newContent = ref('')
 const editName = ref('')
 const editContent = ref('')
 const deleteName = ref('')
+
+// 快速貼上：預設存成 shopee，同名時直接覆蓋，方便 Cookie 過期後重貼
+const quickName = ref('shopee')
+const quickContent = ref('')
+
+async function handleQuickSave() {
+  if (!quickContent.value.trim()) {
+    toast({ title: t('accounts.toasts.contentRequired'), description: t('accounts.toasts.updateDescriptionRequired'), variant: 'destructive' })
+    return
+  }
+  isSaving.value = true
+  try {
+    const saved = await createAccount({
+      name: quickName.value.trim() || 'shopee',
+      content: quickContent.value.trim(),
+      overwrite: true,
+    })
+    quickContent.value = ''
+    if (saved.logged_in) {
+      toast({ title: t('accounts.quick.saved', { name: saved.name }) })
+    } else {
+      toast({ title: t('accounts.quick.savedNotLoggedIn'), description: t('accounts.quick.notLoggedInHint'), variant: 'destructive' })
+    }
+    await fetchAccounts()
+  } catch (e) {
+    toast({ title: t('accounts.toasts.createFailed'), description: (e as Error).message, variant: 'destructive' })
+  } finally {
+    isSaving.value = false
+  }
+}
+
+function statusLabel(account: AccountItem) {
+  if (account.invalid) return t('accounts.status.invalid')
+  if (account.expired) return t('accounts.status.expired')
+  return account.logged_in ? t('accounts.status.loggedIn') : t('accounts.status.notLoggedIn')
+}
+
+function isHealthy(account: AccountItem) {
+  return !!account.logged_in && !account.expired && !account.invalid
+}
+
+function formatTime(value?: string | null) {
+  return value ? formatDateTime(value, { dateStyle: 'medium', timeStyle: 'short' }) : '—'
+}
 
 async function fetchAccounts() {
   isLoading.value = true
@@ -37,12 +80,6 @@ async function fetchAccounts() {
   } finally {
     isLoading.value = false
   }
-}
-
-function openCreateDialog() {
-  newName.value = ''
-  newContent.value = ''
-  isCreateDialogOpen.value = true
 }
 
 async function openEditDialog(name: string) {
@@ -66,24 +103,6 @@ function openDeleteDialog(name: string) {
 
 function goCreateTask(name: string) {
   router.push({ path: '/tasks', query: { account: name, create: '1' } })
-}
-
-async function handleCreateAccount() {
-  if (!newName.value.trim() || !newContent.value.trim()) {
-    toast({ title: t('accounts.toasts.incomplete'), description: t('accounts.toasts.createDescriptionRequired'), variant: 'destructive' })
-    return
-  }
-  isSaving.value = true
-  try {
-    await createAccount({ name: newName.value.trim(), content: newContent.value.trim() })
-    toast({ title: t('accounts.toasts.created') })
-    isCreateDialogOpen.value = false
-    await fetchAccounts()
-  } catch (e) {
-    toast({ title: t('accounts.toasts.createFailed'), description: (e as Error).message, variant: 'destructive' })
-  } finally {
-    isSaving.value = false
-  }
 }
 
 async function handleUpdateAccount() {
@@ -128,8 +147,26 @@ onMounted(fetchAccounts)
         <h1 class="text-2xl font-bold text-gray-800">{{ t('accounts.title') }}</h1>
         <p class="text-sm text-gray-500 mt-1">{{ t('accounts.description') }}</p>
       </div>
-      <Button class="w-full sm:w-auto" @click="openCreateDialog">{{ t('accounts.add') }}</Button>
     </div>
+
+    <Card class="app-surface mb-6 border-none">
+      <CardHeader>
+        <CardTitle>{{ t('accounts.quick.title') }}</CardTitle>
+        <CardDescription>{{ t('accounts.quick.description') }}</CardDescription>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <Textarea v-model="quickContent" class="min-h-[140px] font-mono text-xs" :placeholder="t('accounts.createDialog.jsonPlaceholder')" />
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div class="grid gap-2 sm:w-64">
+            <Label>{{ t('accounts.createDialog.name') }}</Label>
+            <Input v-model="quickName" placeholder="shopee" />
+          </div>
+          <Button class="sm:w-auto" :disabled="isSaving" @click="handleQuickSave">
+            {{ isSaving ? t('common.saving') : t('accounts.quick.save') }}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
 
     <Card class="app-surface mb-6 border-none">
       <CardHeader>
@@ -182,7 +219,11 @@ onMounted(fetchAccounts)
                 <h3 class="truncate text-base font-semibold text-slate-900">{{ account.name }}</h3>
                 <Button size="sm" variant="outline" @click="goCreateTask(account.name)">{{ t('accounts.list.createTask') }}</Button>
               </div>
-              <p class="break-all text-sm text-slate-500">{{ account.path }}</p>
+              <div class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                <Badge :variant="isHealthy(account) ? 'default' : 'destructive'">{{ statusLabel(account) }}</Badge>
+                <span v-if="account.shopee_user_id">ID {{ account.shopee_user_id }}</span>
+                <span>{{ t('accounts.status.updatedAt', { time: formatTime(account.updated_at) }) }}</span>
+              </div>
             </div>
             <div class="mt-4 flex flex-wrap gap-2">
               <Button size="sm" variant="outline" class="flex-1 min-w-[120px]" @click="openEditDialog(account.name)">{{ t('accounts.list.update') }}</Button>
@@ -196,20 +237,30 @@ onMounted(fetchAccounts)
             <TableHeader>
               <TableRow>
                 <TableHead>{{ t('accounts.list.name') }}</TableHead>
-                <TableHead>{{ t('accounts.list.file') }}</TableHead>
+                <TableHead>{{ t('accounts.status.title') }}</TableHead>
+                <TableHead>{{ t('accounts.status.expiresAt') }}</TableHead>
+                <TableHead>{{ t('accounts.status.updated') }}</TableHead>
                 <TableHead class="text-right">{{ t('accounts.list.actions') }}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow v-if="isLoading">
-                <TableCell colspan="3" class="h-20 text-center text-muted-foreground">{{ t('common.loading') }}</TableCell>
+                <TableCell colspan="5" class="h-20 text-center text-muted-foreground">{{ t('common.loading') }}</TableCell>
               </TableRow>
               <TableRow v-else-if="accounts.length === 0">
-                <TableCell colspan="3" class="h-20 text-center text-muted-foreground">{{ t('accounts.list.empty') }}</TableCell>
+                <TableCell colspan="5" class="h-20 text-center text-muted-foreground">{{ t('accounts.list.empty') }}</TableCell>
               </TableRow>
               <TableRow v-else v-for="account in accounts" :key="account.name">
                 <TableCell class="font-medium">{{ account.name }}</TableCell>
-                <TableCell class="text-sm text-gray-500">{{ account.path }}</TableCell>
+                <TableCell>
+                  <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                    <Badge :variant="isHealthy(account) ? 'default' : 'destructive'">{{ statusLabel(account) }}</Badge>
+                    <span v-if="account.shopee_user_id">ID {{ account.shopee_user_id }}</span>
+                    <span>{{ t('accounts.status.cookieCount', { count: account.cookie_count ?? 0 }) }}</span>
+                  </div>
+                </TableCell>
+                <TableCell class="text-sm text-gray-500">{{ formatTime(account.expires_at) }}</TableCell>
+                <TableCell class="text-sm text-gray-500">{{ formatTime(account.updated_at) }}</TableCell>
                 <TableCell class="text-right">
                   <div class="flex justify-end gap-2">
                     <Button size="sm" variant="outline" @click="goCreateTask(account.name)">{{ t('accounts.list.createTask') }}</Button>
@@ -223,31 +274,6 @@ onMounted(fetchAccounts)
         </div>
       </CardContent>
     </Card>
-
-    <Dialog v-model:open="isCreateDialogOpen">
-      <DialogContent class="sm:max-w-[700px]">
-        <DialogHeader>
-          <DialogTitle>{{ t('accounts.createDialog.title') }}</DialogTitle>
-          <DialogDescription>{{ t('accounts.createDialog.description') }}</DialogDescription>
-        </DialogHeader>
-        <div class="space-y-4">
-          <div class="grid gap-2">
-            <Label>{{ t('accounts.createDialog.name') }}</Label>
-            <Input v-model="newName" :placeholder="t('accounts.createDialog.namePlaceholder')" />
-          </div>
-          <div class="grid gap-2">
-            <Label>{{ t('accounts.createDialog.jsonContent') }}</Label>
-            <Textarea v-model="newContent" class="min-h-[200px]" :placeholder="t('accounts.createDialog.jsonPlaceholder')" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" @click="isCreateDialogOpen = false">{{ t('common.cancel') }}</Button>
-          <Button :disabled="isSaving" @click="handleCreateAccount">
-            {{ isSaving ? t('common.saving') : t('common.save') }}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
 
     <Dialog v-model:open="isEditDialogOpen">
       <DialogContent class="sm:max-w-[700px]">

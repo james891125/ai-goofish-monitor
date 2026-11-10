@@ -1,5 +1,5 @@
 """
-Cron 解析与校验工具。
+Cron 解析與校驗工具。
 """
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ CRON_ALIASES = {
 }
 
 CRON_FORMAT_HINT = (
-    "Cron 表达式无效。支持 5 段（分 时 日 月 周）、"
-    "6 段（秒 分 时 日 月 周）和常见别名（@hourly/@daily/@weekly/@monthly/@yearly）。"
+    "Cron 表示式無效。支援 5 段（分 時 日 月 周）、"
+    "6 段（秒 分 時 日 月 周）和常見別名（@hourly/@daily/@weekly/@monthly/@yearly）。"
     "示例：*/15 * * * *、0 8 * * *、0 0 8 * * *、@daily。"
 )
 

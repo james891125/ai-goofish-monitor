@@ -1,51 +1,24 @@
 import { http } from '@/lib/http'
 
 export interface NotificationSettings {
-  NTFY_TOPIC_URL?: string
-  PUSHPLUS_TOKEN?: string
-  PUSHPLUS_TOPIC?: string
-  GOTIFY_URL?: string
-  GOTIFY_TOKEN?: string
-  BARK_URL?: string
-  WX_BOT_URL?: string
-  TELEGRAM_BOT_TOKEN?: string
-  TELEGRAM_CHAT_ID?: string
-  TELEGRAM_API_BASE_URL?: string
   WEBHOOK_URL?: string
   WEBHOOK_METHOD?: string
   WEBHOOK_HEADERS?: string
   WEBHOOK_CONTENT_TYPE?: string
   WEBHOOK_QUERY_PARAMETERS?: string
   WEBHOOK_BODY?: string
-  PCURL_TO_MOBILE?: boolean
-  BARK_URL_SET?: boolean
-  GOTIFY_TOKEN_SET?: boolean
-  WX_BOT_URL_SET?: boolean
-  TELEGRAM_BOT_TOKEN_SET?: boolean
   WEBHOOK_URL_SET?: boolean
   WEBHOOK_HEADERS_SET?: boolean
-  PUSHPLUS_TOKEN_SET?: boolean
   CONFIGURED_CHANNELS?: string[]
 }
 
 export interface NotificationSettingsUpdate {
-  NTFY_TOPIC_URL?: string | null
-  PUSHPLUS_TOKEN?: string | null
-  PUSHPLUS_TOPIC?: string | null
-  GOTIFY_URL?: string | null
-  GOTIFY_TOKEN?: string | null
-  BARK_URL?: string | null
-  WX_BOT_URL?: string | null
-  TELEGRAM_BOT_TOKEN?: string | null
-  TELEGRAM_CHAT_ID?: string | null
-  TELEGRAM_API_BASE_URL?: string | null
   WEBHOOK_URL?: string | null
   WEBHOOK_METHOD?: string | null
   WEBHOOK_HEADERS?: string | null
   WEBHOOK_CONTENT_TYPE?: string | null
   WEBHOOK_QUERY_PARAMETERS?: string | null
   WEBHOOK_BODY?: string | null
-  PCURL_TO_MOBILE?: boolean
 }
 
 export interface NotificationTestResponse {
@@ -93,14 +66,6 @@ export interface SystemStatus {
     openai_api_key_set: boolean
     openai_base_url_set: boolean
     openai_model_name_set: boolean
-    ntfy_topic_url_set: boolean
-    pushplus_token_set: boolean
-    gotify_url_set: boolean
-    gotify_token_set: boolean
-    bark_url_set: boolean
-    wx_bot_url_set: boolean
-    telegram_bot_token_set: boolean
-    telegram_chat_id_set: boolean
     webhook_url_set: boolean
     webhook_headers_set: boolean
   }

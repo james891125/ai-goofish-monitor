@@ -17,9 +17,9 @@ FORBIDDEN_LOG_MARKERS = (
     "Login required",
     "/buyer/login",
     "蝦皮要求人機驗證",
-    "AI客户端未初始化",
-    "未找到可用的登录状态文件",
-    "检测到登录失效/重定向",
+    "AI客戶端未初始化",
+    "未找到可用的登入狀態檔案",
+    "檢測到登入失效/重定向",
 )
 
 def api_request(session: requests.Session, method: str, url: str, **kwargs) -> requests.Response:
@@ -61,9 +61,9 @@ def read_task_log(workspace: Path, task_id: int) -> tuple[Path | None, str]:
     return log_path, log_path.read_text(encoding="utf-8", errors="ignore")
 
 def assert_log_is_clean(log_text: str, log_path: Path | None) -> None:
-    assert log_path is not None, "live 任务日志不存在。"
+    assert log_path is not None, "live 任務日誌不存在。"
     for marker in FORBIDDEN_LOG_MARKERS:
-        assert marker not in log_text, f"日志包含失败标记 {marker}，请检查 {log_path}"
+        assert marker not in log_text, f"日誌包含失敗標記 {marker}，請檢查 {log_path}"
 
 def wait_for_task_running(
     session: requests.Session,
@@ -78,7 +78,7 @@ def wait_for_task_running(
         if last_task.get("is_running"):
             return last_task
         time.sleep(TASK_POLL_INTERVAL_SECONDS)
-    pytest.fail(f"任务 {task_id} 未在预期时间内进入运行态: {last_task}")
+    pytest.fail(f"任務 {task_id} 未在預期時間內進入執行態: {last_task}")
 
 def wait_for_task_completion(
     session: requests.Session,
@@ -111,7 +111,7 @@ def wait_for_task_completion(
 
     log_path, log_text = read_task_log(workspace, task_id)
     pytest.fail(
-        f"任务 {task_id} 在 {timeout_seconds}s 内未结束。log={log_path}\n{log_text[-4000:]}"
+        f"任務 {task_id} 在 {timeout_seconds}s 內未結束。log={log_path}\n{log_text[-4000:]}"
     )
 
 def delete_task_safely(session: requests.Session, base_url: str, task_id: int) -> None:
@@ -193,15 +193,15 @@ def test_live_real_traffic_task_smoke(live_server):
 
             if result_data is None:
                 result_data = fetch_results_or_none(session, live_server.base_url, filename)
-            assert result_data is not None, f"结果文件 {filename} 未生成。"
+            assert result_data is not None, f"結果檔案 {filename} 未生成。"
             assert result_data["total_items"] >= live_server.settings.expect_min_items
 
             item = result_data["items"][0]
-            product = item.get("商品信息", {})
+            product = item.get("商品資訊", {})
             analysis = item.get("ai_analysis", {})
-            assert product.get("商品标题"), item
-            assert product.get("商品链接"), item
-            assert product.get("当前售价"), item
+            assert product.get("商品標題"), item
+            assert product.get("商品連結"), item
+            assert product.get("目前售價"), item
             assert analysis, item
             assert analysis.get("analysis_source") == "ai", item
 
@@ -214,7 +214,7 @@ def test_live_real_traffic_task_smoke(live_server):
 @pytest.mark.live_slow
 def test_live_ai_task_generation_job(live_server):
     if not live_server.settings.enable_task_generation:
-        pytest.skip("未设置 LIVE_ENABLE_TASK_GENERATION=1，跳过真实 AI 任务生成测试。")
+        pytest.skip("未設定 LIVE_ENABLE_TASK_GENERATION=1，跳過真實 AI 任務生成測試。")
 
     payload = {
         "task_name": f"{live_server.settings.task_name} Generated",
@@ -252,10 +252,10 @@ def test_live_ai_task_generation_job(live_server):
             if latest_job["status"] == "completed":
                 break
             if latest_job["status"] == "failed":
-                pytest.fail(f"真实 AI 任务生成失败: {latest_job}")
+                pytest.fail(f"真實 AI 任務生成失敗: {latest_job}")
             time.sleep(TASK_POLL_INTERVAL_SECONDS)
         else:
-            pytest.fail(f"真实 AI 任务生成超时: {latest_job}")
+            pytest.fail(f"真實 AI 任務生成超時: {latest_job}")
 
         task = latest_job["task"]
         assert task["ai_prompt_criteria_file"]

@@ -222,7 +222,7 @@ export function useResults() {
 
   async function toggleItemBlock(item: ResultItem) {
     if (!selectedFile.value) return
-    const itemId = item.商品信息?.商品ID
+    const itemId = item.商品資訊?.商品ID
     if (!itemId) return
     const newStatus = item._status === 'hidden' ? 'active' : 'hidden'
     try {

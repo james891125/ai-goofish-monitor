@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSettings } from '@/composables/useSettings'
@@ -33,6 +33,48 @@ const {
   saveRotationSettings,
   testAiConnection
 } = useSettings()
+
+// 三家都走 OpenAI 相容的 Chat Completions 介面；模型名稱只是建議值，可自行修改
+const AI_PROVIDER_PRESETS = [
+  {
+    key: 'gemini',
+    label: 'Google Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    model: 'gemini-2.5-flash',
+    keyUrl: 'https://aistudio.google.com/apikey',
+  },
+  {
+    key: 'openrouter',
+    label: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'google/gemini-2.5-flash',
+    keyUrl: 'https://openrouter.ai/keys',
+  },
+  {
+    key: 'openai',
+    label: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+    keyUrl: 'https://platform.openai.com/api-keys',
+  },
+] as const
+
+function normalizeBaseUrl(value?: string) {
+  return String(value || '').trim().replace(/\/+$/, '')
+}
+
+function isActiveProvider(baseUrl: string) {
+  return normalizeBaseUrl(aiSettings.value.OPENAI_BASE_URL) === normalizeBaseUrl(baseUrl)
+}
+
+function applyAiProvider(preset: (typeof AI_PROVIDER_PRESETS)[number]) {
+  aiSettings.value.OPENAI_BASE_URL = preset.baseUrl
+  aiSettings.value.OPENAI_MODEL_NAME = preset.model
+}
+
+const activeAiProvider = computed(() => (
+  AI_PROVIDER_PRESETS.find((preset) => isActiveProvider(preset.baseUrl)) ?? null
+))
 
 const activeTab = ref('ai')
 const route = useRoute()
@@ -204,8 +246,33 @@ watch(selectedPrompt, async (value) => {
           </CardHeader>
           <CardContent v-if="isReady" class="space-y-4">
             <div class="grid gap-2">
+              <Label>{{ t('settings.ai.provider') }}</Label>
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  v-for="preset in AI_PROVIDER_PRESETS"
+                  :key="preset.key"
+                  type="button"
+                  size="sm"
+                  :variant="isActiveProvider(preset.baseUrl) ? 'default' : 'outline'"
+                  @click="applyAiProvider(preset)"
+                >
+                  {{ preset.label }}
+                </Button>
+              </div>
+              <p class="text-xs text-gray-500">
+                {{ t('settings.ai.providerHint') }}
+                <a
+                  v-if="activeAiProvider"
+                  class="text-blue-600 hover:underline"
+                  :href="activeAiProvider.keyUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >{{ t('settings.ai.getKey', { provider: activeAiProvider.label }) }}</a>
+              </p>
+            </div>
+            <div class="grid gap-2">
               <Label>API Base URL</Label>
-              <Input v-model="aiSettings.OPENAI_BASE_URL" placeholder="https://api.openai.com/v1" />
+              <Input v-model="aiSettings.OPENAI_BASE_URL" placeholder="https://generativelanguage.googleapis.com/v1beta/openai/" />
             </div>
             <div class="grid gap-2">
               <Label>API Key</Label>
@@ -220,7 +287,7 @@ watch(selectedPrompt, async (value) => {
             </div>
             <div class="grid gap-2">
               <Label>{{ t('settings.ai.modelName') }}</Label>
-              <Input v-model="aiSettings.OPENAI_MODEL_NAME" placeholder="gpt-3.5-turbo" />
+              <Input v-model="aiSettings.OPENAI_MODEL_NAME" placeholder="gemini-2.5-flash" />
             </div>
             <div class="grid gap-2">
               <Label>{{ t('settings.ai.proxy') }}</Label>
@@ -295,7 +362,7 @@ watch(selectedPrompt, async (value) => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="p-3 border rounded-lg" :class="systemStatus.env_file.openai_api_key_set ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'">
                         <div class="flex justify-between items-center">
-                            <span class="font-medium text-sm">OpenAI API Key</span>
+                            <span class="font-medium text-sm">AI API Key</span>
                             <span class="text-xs font-bold" :class="systemStatus.env_file.openai_api_key_set ? 'text-green-700' : 'text-yellow-700'">
                                 {{ systemStatus.env_file.openai_api_key_set ? t('common.active') : t('common.inactive') }}
                             </span>

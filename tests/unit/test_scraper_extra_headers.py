@@ -8,7 +8,7 @@ def test_build_extra_headers_drops_fetch_metadata_that_blanks_document():
             "Accept-Encoding": "gzip, deflate, br, zstd",
             "Accept-Language": "zh-CN,zh;q=0.9",
             "Cookie": "secret=1",
-            "Referer": "https://www.goofish.com/",
+            "Referer": "https://shopee.tw/",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin",

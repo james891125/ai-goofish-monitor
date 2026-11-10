@@ -3,14 +3,14 @@ from src.keyword_rule_engine import build_search_text, evaluate_keyword_rules
 
 def _sample_record():
     return {
-        "商品信息": {
-            "商品标题": "Sony A7M4 全画幅相机",
-            "当前售价": "10000",
-            "商品标签": ["验货宝", "包邮"],
+        "商品資訊": {
+            "商品標題": "Sony A7M4 全畫幅相機",
+            "目前售價": "10000",
+            "商品標籤": ["驗貨寶", "包郵"],
         },
-        "卖家信息": {
-            "卖家昵称": "摄影器材店",
-            "卖家个性签名": "可验机，支持同城面交",
+        "賣家資訊": {
+            "賣家暱稱": "攝影器材店",
+            "賣家個性簽名": "可驗機，支援同城面交",
         },
     }
 
@@ -18,8 +18,8 @@ def _sample_record():
 def test_build_search_text_contains_product_and_seller_fields():
     text = build_search_text(_sample_record())
     assert "sony a7m4" in text
-    assert "摄影器材店" in text
-    assert "支持同城面交" in text
+    assert "攝影器材店" in text
+    assert "支援同城面交" in text
 
 
 def test_keyword_rules_or_match_any_keyword():
@@ -33,7 +33,7 @@ def test_keyword_rules_or_match_any_keyword():
 
 def test_keyword_rules_count_multiple_hits():
     text = build_search_text(_sample_record())
-    result = evaluate_keyword_rules(["a7m4", "验货宝", "摄影器材店"], text)
+    result = evaluate_keyword_rules(["a7m4", "驗貨寶", "攝影器材店"], text)
     assert result["is_recommended"] is True
     assert result["keyword_hit_count"] == 3
 
@@ -47,18 +47,18 @@ def test_keyword_rules_case_insensitive_contains():
 
 def test_keyword_rules_no_match():
     text = build_search_text(_sample_record())
-    result = evaluate_keyword_rules(["佳能", "单反"], text)
+    result = evaluate_keyword_rules(["佳能", "單反"], text)
     assert result["is_recommended"] is False
     assert result["keyword_hit_count"] == 0
 
 
 def test_keyword_rules_do_not_partially_match_alphanumeric_prefixes():
-    result = evaluate_keyword_rules(["q1"], "富士 q1r5 旗舰相机")
+    result = evaluate_keyword_rules(["q1"], "富士 q1r5 旗艦相機")
     assert result["is_recommended"] is False
     assert result["keyword_hit_count"] == 0
 
 
 def test_keyword_rules_still_match_full_alphanumeric_token():
-    result = evaluate_keyword_rules(["q1r5"], "富士 q1r5 旗舰相机")
+    result = evaluate_keyword_rules(["q1r5"], "富士 q1r5 旗艦相機")
     assert result["is_recommended"] is True
     assert result["keyword_hit_count"] == 1

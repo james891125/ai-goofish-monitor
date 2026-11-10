@@ -1,6 +1,6 @@
 .idea
 *.iml
-xianyu_state.json
+shopee_state.json
 .env
 .aider*
 images/
@@ -15,3 +15,4 @@ prompts/
 .serena/
 price_history/
 data/
+.venv/

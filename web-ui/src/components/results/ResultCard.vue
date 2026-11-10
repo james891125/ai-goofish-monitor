@@ -23,8 +23,8 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n()
 
-const info = props.item.商品信息
-const seller = props.item.卖家信息
+const info = props.item.商品資訊
+const seller = props.item.賣家資訊
 const ai = props.item.ai_analysis
 const priceInsight = props.item.price_insight
 
@@ -35,9 +35,9 @@ const recommendationStatus = computed(() => {
   return { label: t('results.card.pending'), color: 'bg-amber-500', icon: AlertCircle, text: 'text-amber-600', bg: 'bg-amber-50' }
 })
 
-const imageUrl = info.商品图片列表?.[0] || info.商品主图链接 || ''
-const crawlTime = props.item.爬取时间
-  ? formatDateTime(props.item.爬取时间, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+const imageUrl = info.商品圖片列表?.[0] || info.商品主圖連結 || ''
+const crawlTime = props.item.爬取時間
+  ? formatDateTime(props.item.爬取時間, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
   : t('common.unknown')
 const matchScore = ai?.value_score ?? 0
 const isHidden = computed(() => props.item._effective_hidden === true || props.item._status === 'hidden')
@@ -60,7 +60,7 @@ const expanded = ref(false)
       <img
         v-else
         :src="imageUrl"
-        :alt="info.商品标题"
+        :alt="info.商品標題"
         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         loading="lazy"
       />
@@ -89,7 +89,7 @@ const expanded = ref(false)
           <Eye v-else class="w-4 h-4" />
         </button>
          <a
-           :href="info.商品链接"
+           :href="info.商品連結"
            target="_blank"
            rel="noopener noreferrer"
            :aria-label="t('results.card.detail')"
@@ -103,14 +103,14 @@ const expanded = ref(false)
     <CardHeader class="p-4 pb-2">
       <div class="flex justify-between items-start gap-3">
         <CardTitle class="text-base font-semibold text-slate-800 line-clamp-2 leading-snug flex-grow h-10">
-          <a :href="info.商品链接" target="_blank" rel="noopener noreferrer" class="hover:text-primary transition-colors">
-            {{ info.商品标题 }}
+          <a :href="info.商品連結" target="_blank" rel="noopener noreferrer" class="hover:text-primary transition-colors">
+            {{ info.商品標題 }}
           </a>
         </CardTitle>
       </div>
       <div class="flex items-baseline gap-1 mt-2">
-        <span class="text-2xl font-bold text-rose-600 tracking-tight">{{ info.当前售价 }}</span>
-        <span v-if="info['商品原价']" class="text-xs text-slate-400 line-through mb-1">{{ info['商品原价'] }}</span>
+        <span class="text-2xl font-bold text-rose-600 tracking-tight">{{ info.目前售價 }}</span>
+        <span v-if="info['商品原價']" class="text-xs text-slate-400 line-through mb-1">{{ info['商品原價'] }}</span>
       </div>
     </CardHeader>
 
@@ -158,7 +158,7 @@ const expanded = ref(false)
             <TrendingUp class="w-3 h-3" /> {{ t('results.card.marketAvg') }}
           </div>
           <div class="text-sm font-bold text-slate-700">
-            {{ priceInsight.market_avg_price ? `¥${priceInsight.market_avg_price}` : '—' }}
+            {{ priceInsight.market_avg_price ? `NT$${priceInsight.market_avg_price}` : '—' }}
           </div>
         </div>
         <div class="bg-slate-50/50 p-2.5 rounded-xl border border-slate-100/50">
@@ -166,7 +166,7 @@ const expanded = ref(false)
             <TrendingDown class="w-3 h-3" /> {{ t('results.card.historicalLow') }}
           </div>
           <div class="text-sm font-bold text-slate-700">
-            {{ priceInsight.min_price ? `¥${priceInsight.min_price}` : '—' }}
+            {{ priceInsight.min_price ? `NT$${priceInsight.min_price}` : '—' }}
           </div>
         </div>
       </div>
@@ -176,14 +176,14 @@ const expanded = ref(false)
       <div class="flex items-center gap-3 text-slate-400">
         <div class="flex items-center gap-1">
           <User class="w-3 h-3" />
-          <span class="truncate max-w-[60px]">{{ seller.卖家昵称 || info.卖家昵称 || t('results.card.anonymous') }}</span>
+          <span class="truncate max-w-[60px]">{{ seller.賣家暱稱 || info.賣家暱稱 || t('results.card.anonymous') }}</span>
         </div>
         <div class="flex items-center gap-1">
           <Clock class="w-3 h-3" />
           <span>{{ crawlTime }}</span>
         </div>
       </div>
-      <a :href="info.商品链接" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 text-primary font-bold hover:gap-1.5 transition-all">
+      <a :href="info.商品連結" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 text-primary font-bold hover:gap-1.5 transition-all">
         {{ t('results.card.detail') }} <ExternalLink class="w-3 h-3" />
       </a>
     </CardFooter>

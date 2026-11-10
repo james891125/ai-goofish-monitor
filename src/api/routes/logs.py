@@ -1,5 +1,5 @@
 """
-日志管理路由
+日誌管理路由
 """
 import os
 from typing import Optional, Tuple, List
@@ -58,17 +58,17 @@ async def get_logs(
     task_id: Optional[int] = Query(default=None, ge=0),
     task_service: TaskService = Depends(get_task_service),
 ):
-    """获取日志内容（增量读取）"""
+    """獲取日誌內容（增量讀取）"""
     if task_id is None:
         return JSONResponse(content={
-            "new_content": "请选择任务后查看日志。",
+            "new_content": "請選擇任務後檢視日誌。",
             "new_pos": 0
         })
 
     task = await task_service.get_task(task_id)
     if not task:
         return JSONResponse(status_code=404, content={
-            "new_content": "任务不存在或已删除。",
+            "new_content": "任務不存在或已刪除。",
             "new_pos": 0
         })
 
@@ -97,7 +97,7 @@ async def get_logs(
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"new_content": f"\n读取日志文件时出错: {e}", "new_pos": from_pos}
+            content={"new_content": f"\n讀取日誌檔案時出錯: {e}", "new_pos": from_pos}
         )  
 
 
@@ -108,7 +108,7 @@ async def get_logs_tail(
     limit_lines: int = Query(default=50, ge=1, le=1000),
     task_service: TaskService = Depends(get_task_service),
 ):
-    """获取日志尾部内容（按行分页）"""
+    """獲取日誌尾部內容（按行分頁）"""
     if task_id is None:
         return JSONResponse(content={
             "content": "",
@@ -153,7 +153,7 @@ async def get_logs_tail(
         return JSONResponse(
             status_code=500,
             content={
-                "content": f"读取日志文件时出错: {e}",
+                "content": f"讀取日誌檔案時出錯: {e}",
                 "has_more": False,
                 "next_offset": offset_lines,
                 "new_pos": 0
@@ -166,38 +166,38 @@ async def clear_logs(
     task_id: Optional[int] = Query(default=None, ge=0),
     task_service: TaskService = Depends(get_task_service),
 ):
-    """清空日志文件"""
+    """清空日誌檔案"""
     if task_id is None:
-        return {"message": "未指定任务，无法清空日志。"}
+        return {"message": "未指定任務，無法清空日誌。"}
 
     task = await task_service.get_task(task_id)
     if not task:
-        return {"message": "任务不存在或已删除。"}
+        return {"message": "任務不存在或已刪除。"}
 
     log_file_path = resolve_task_log_path(task_id, task.task_name)
 
     if not os.path.exists(log_file_path):
-        return {"message": "日志文件不存在，无需清空。"}
+        return {"message": "日誌檔案不存在，無需清空。"}
 
     try:
         async with aiofiles.open(log_file_path, 'w', encoding='utf-8') as f:
             await f.write("")
-        return {"message": "日志已成功清空。"}
+        return {"message": "日誌已成功清空。"}
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"message": f"清空日志文件时出错: {e}"}
+            content={"message": f"清空日誌檔案時出錯: {e}"}
         )
 
     if not os.path.exists(log_file_path):
-        return {"message": "日志文件不存在，无需清空。"}
+        return {"message": "日誌檔案不存在，無需清空。"}
 
     try:
         async with aiofiles.open(log_file_path, 'w', encoding='utf-8') as f:
             await f.write("")
-        return {"message": "日志已成功清空。"}
+        return {"message": "日誌已成功清空。"}
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"message": f"清空日志文件时出错: {e}"}
+            content={"message": f"清空日誌檔案時出錯: {e}"}
         )

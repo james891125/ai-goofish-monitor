@@ -37,23 +37,23 @@ def test_wants_latest_sort():
 
 def test_parse_search_items_maps_pipeline_fields():
     items = shopee.parse_search_items(_load("shopee_search.json"))
-    assert len(items) == 2  # 缺少 ID 的項目被略過
+    assert len(items) == 2  # 缺少 ID 的專案被略過
 
     first = items[0]
-    assert first["商品ID"] == "111" and first["卖家ID"] == "222"
-    assert first["商品链接"] == f"{shopee.SHOPEE_BASE_URL}/product/222/111"
-    assert first["当前售价"] == "$18,500"
-    assert first["商品原价"] == "$20,000"
-    assert first["已售数量"] == 12
-    assert first["商品评分"] == 4.88 and first["评价数量"] == 30
-    assert first["发货地区"] == "台北市大安區"
-    assert "免運" in first["商品标签"] and "蝦皮優選" in first["商品标签"]
-    assert len(first["商品图片列表"]) == 2
-    assert first["商品主图链接"].endswith("/file/tw-aaa")
+    assert first["商品ID"] == "111" and first["賣家ID"] == "222"
+    assert first["商品連結"] == f"{shopee.SHOPEE_BASE_URL}/product/222/111"
+    assert first["目前售價"] == "$18,500"
+    assert first["商品原價"] == "$20,000"
+    assert first["已售數量"] == 12
+    assert first["商品評分"] == 4.88 and first["評價數量"] == 30
+    assert first["出貨地區"] == "臺北市大安區"
+    assert "免運" in first["商品標籤"] and "蝦皮優選" in first["商品標籤"]
+    assert len(first["商品圖片列表"]) == 2
+    assert first["商品主圖連結"].endswith("/file/tw-aaa")
 
     second = items[1]
-    assert second["当前售价"] == "$30,000 - $45,500"
-    assert second["商品图片列表"] == [second["商品主图链接"]]
+    assert second["目前售價"] == "$30,000 - $45,500"
+    assert second["商品圖片列表"] == [second["商品主圖連結"]]
 
 
 def test_parse_search_items_handles_bad_payload():
@@ -65,25 +65,25 @@ def test_price_strings_are_parseable_by_price_history():
     assert parse_price_value("$18,500") == 18500.0
     assert parse_price_value("$30,000 - $45,500") == 30000.0
     assert parse_price_value("¥1,200") == 1200.0
-    assert parse_price_value("价格异常") is None
+    assert parse_price_value("價格異常") is None
 
 
 def test_parse_item_detail_and_shop_info():
     payload = _load("shopee_detail.json")
     detail = shopee.parse_item_detail(payload)
-    assert detail["商品标题"].endswith("電池健康 92%")
+    assert detail["商品標題"].endswith("電池健康 92%")
     assert detail["商品描述"] == "自用機，無維修紀錄，附原廠充電器。"
-    assert len(detail["商品图片列表"]) == 3
-    assert detail["当前售价"] == "$18,500"
-    assert detail["已售数量"] == 13 and detail["“想要”人数"] == 46
-    assert detail["商品状况"] == "二手" and detail["品牌"] == "Apple"
-    assert detail["商品属性"] == {"保固": "無"}
-    assert detail["规格列表"] == [{"规格": "太空灰", "价格": "$18,500", "库存": 2}]
+    assert len(detail["商品圖片列表"]) == 3
+    assert detail["目前售價"] == "$18,500"
+    assert detail["已售數量"] == 13 and detail["“想要”人數"] == 46
+    assert detail["商品狀況"] == "二手" and detail["品牌"] == "Apple"
+    assert detail["商品屬性"] == {"保固": "無"}
+    assert detail["規格列表"] == [{"規格": "太空灰", "價格": "$18,500", "庫存": 2}]
 
     shop = shopee.parse_shop_info(payload)
-    assert shop["卖家昵称"] == "阿明的3C小舖" and shop["卖家ID"] == "222"
-    assert shop["聊天回应率"] == "98%" and shop["粉丝数"] == 1234
-    assert shop["卖家注册时长"].startswith("加入蝦皮")
+    assert shop["賣家暱稱"] == "阿明的3C小舖" and shop["賣家ID"] == "222"
+    assert shop["聊天回應率"] == "98%" and shop["粉絲數"] == 1234
+    assert shop["賣家註冊時長"].startswith("加入蝦皮")
 
 
 def test_parse_detail_handles_missing_data():
@@ -95,7 +95,7 @@ def test_filter_search_items_by_shipping_and_region():
     items = shopee.parse_search_items(_load("shopee_search.json"))
     assert [i["商品ID"] for i in shopee.filter_search_items(items, free_shipping=True)] == ["111"]
     assert [i["商品ID"] for i in shopee.filter_search_items(items, region_filter="高雄市")] == ["333"]
-    assert len(shopee.filter_search_items(items, region_filter="台北市/高雄市")) == 2
+    assert len(shopee.filter_search_items(items, region_filter="臺北市/高雄市")) == 2
     assert len(shopee.filter_search_items(items)) == 2
 
 

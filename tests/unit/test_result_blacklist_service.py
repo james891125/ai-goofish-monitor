@@ -3,10 +3,10 @@ from src.services.result_blacklist_service import match_blacklist_keywords
 
 def _build_record(title: str) -> dict:
     return {
-        "商品信息": {
-            "商品标题": title,
+        "商品資訊": {
+            "商品標題": title,
         },
-        "卖家信息": {},
+        "賣家資訊": {},
     }
 
 

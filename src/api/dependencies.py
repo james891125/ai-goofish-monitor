@@ -1,6 +1,6 @@
 """
-FastAPI 依赖注入
-提供服务实例的创建和管理
+FastAPI 依賴注入
+提供服務實例的建立和管理
 """
 from fastapi import Depends
 from src.services.task_service import TaskService
@@ -13,64 +13,64 @@ from src.infrastructure.persistence.sqlite_task_repository import SqliteTaskRepo
 from src.infrastructure.external.ai_client import AIClient
 
 
-# 全局 ProcessService 实例（将在 app.py 中设置）
+# 全域 ProcessService 實例（將在 app.py 中設定）
 _process_service_instance = None
 _scheduler_service_instance = None
 _task_generation_service_instance = None
 
 
 def set_process_service(service: ProcessService):
-    """设置全局 ProcessService 实例"""
+    """設定全域 ProcessService 實例"""
     global _process_service_instance
     _process_service_instance = service
 
 
 def set_scheduler_service(service: SchedulerService):
-    """设置全局 SchedulerService 实例"""
+    """設定全域 SchedulerService 實例"""
     global _scheduler_service_instance
     _scheduler_service_instance = service
 
 
 def set_task_generation_service(service: TaskGenerationService):
-    """设置全局 TaskGenerationService 实例"""
+    """設定全域 TaskGenerationService 實例"""
     global _task_generation_service_instance
     _task_generation_service_instance = service
 
 
-# 服务依赖注入
+# 服務依賴注入
 def get_task_service() -> TaskService:
-    """获取任务管理服务实例"""
+    """獲取任務管理服務實例"""
     repository = SqliteTaskRepository()
     return TaskService(repository)
 
 
 def get_notification_service() -> NotificationService:
-    """获取通知服务实例"""
+    """獲取通知服務實例"""
     return build_notification_service()
 
 
 def get_ai_service() -> AIAnalysisService:
-    """获取AI分析服务实例"""
+    """獲取AI分析服務實例"""
     ai_client = AIClient()
     return AIAnalysisService(ai_client)
 
 
 def get_process_service() -> ProcessService:
-    """获取进程管理服务实例"""
+    """獲取程序管理服務實例"""
     if _process_service_instance is None:
         raise RuntimeError("ProcessService 未初始化")
     return _process_service_instance
 
 
 def get_scheduler_service() -> SchedulerService:
-    """获取调度服务实例"""
+    """獲取排程服務實例"""
     if _scheduler_service_instance is None:
         raise RuntimeError("SchedulerService 未初始化")
     return _scheduler_service_instance
 
 
 def get_task_generation_service() -> TaskGenerationService:
-    """获取任务生成作业服务实例"""
+    """獲取任務生成作業服務實例"""
     if _task_generation_service_instance is None:
         raise RuntimeError("TaskGenerationService 未初始化")
     return _task_generation_service_instance

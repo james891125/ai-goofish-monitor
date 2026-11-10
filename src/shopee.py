@@ -2,7 +2,7 @@
 蝦皮 (Shopee) 相關的 URL 組裝與 API 回應解析。
 
 這裡只放純函式：不碰瀏覽器、不發請求，方便單元測試。
-輸出欄位沿用原本管線使用的鍵名（商品标题 / 当前售价 / 商品链接 ...），
+輸出欄位沿用原本管線使用的鍵名（商品標題 / 目前售價 / 商品連結 ...），
 讓 AI 分析、通知、結果儲存與前端都不需要改動。
 """
 import os
@@ -102,7 +102,7 @@ def is_risk_blocked_payload(payload: Any) -> bool:
 def format_price(raw: Any) -> str:
     """把 API 的整數金額轉成顯示字串，例如 129000000 -> "$1,290"。"""
     if not isinstance(raw, (int, float)) or raw <= 0:
-        return "价格异常"
+        return "價格異常"
     value = raw / PRICE_SCALE
     if abs(value - round(value)) < 1e-9:
         return f"${int(round(value)):,}"
@@ -121,7 +121,7 @@ def _format_price_range(low: Any, high: Any, single: Any) -> str:
 
 def _format_timestamp(ts: Any) -> str:
     if not isinstance(ts, (int, float)) or ts <= 0:
-        return "未知时间"
+        return "未知時間"
     return datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M")
 
 
@@ -185,25 +185,25 @@ def parse_search_items(payload: Any) -> list[dict]:
 
         results.append(
             {
-                "商品标题": basic.get("name") or "未知标题",
-                "当前售价": _format_price_range(
+                "商品標題": basic.get("name") or "未知標題",
+                "目前售價": _format_price_range(
                     basic.get("price_min"), basic.get("price_max"), basic.get("price")
                 ),
-                "商品原价": format_price(before_discount) if before_discount else "暂无",
-                "“想要”人数": basic.get("liked_count", 0),
-                "已售数量": basic.get("historical_sold", basic.get("sold", 0)),
-                "库存": basic.get("stock", "未知"),
-                "商品评分": round(float(rating.get("rating_star") or 0), 2),
-                "评价数量": rating_counts[0] if rating_counts else 0,
-                "商品标签": _build_tags(basic),
-                "发货地区": basic.get("shop_location") or "地区未知",
-                "卖家昵称": basic.get("shop_name") or f"shop_{shop_id}",
-                "商品链接": build_item_url(shop_id, item_id),
-                "发布时间": _format_timestamp(basic.get("ctime")),
+                "商品原價": format_price(before_discount) if before_discount else "暫無",
+                "“想要”人數": basic.get("liked_count", 0),
+                "已售數量": basic.get("historical_sold", basic.get("sold", 0)),
+                "庫存": basic.get("stock", "未知"),
+                "商品評分": round(float(rating.get("rating_star") or 0), 2),
+                "評價數量": rating_counts[0] if rating_counts else 0,
+                "商品標籤": _build_tags(basic),
+                "出貨地區": basic.get("shop_location") or "地區未知",
+                "賣家暱稱": basic.get("shop_name") or f"shop_{shop_id}",
+                "商品連結": build_item_url(shop_id, item_id),
+                "釋出時間": _format_timestamp(basic.get("ctime")),
                 "商品ID": str(item_id),
-                "卖家ID": str(shop_id),
-                "商品主图链接": main_image,
-                "商品图片列表": images,
+                "賣家ID": str(shop_id),
+                "商品主圖連結": main_image,
+                "商品圖片列表": images,
             }
         )
     return results
@@ -231,9 +231,9 @@ def _parse_variations(item: dict) -> list[dict]:
             continue
         variations.append(
             {
-                "规格": model.get("name") or "",
-                "价格": format_price(model.get("price")),
-                "库存": _first(model.get("stock"), model.get("normal_stock"), default=0),
+                "規格": model.get("name") or "",
+                "價格": format_price(model.get("price")),
+                "庫存": _first(model.get("stock"), model.get("normal_stock"), default=0),
             }
         )
     return variations
@@ -251,7 +251,7 @@ def parse_item_detail(payload: Any) -> dict:
     detail: dict[str, Any] = {}
     title = _first(item.get("title"), item.get("name"))
     if title:
-        detail["商品标题"] = title
+        detail["商品標題"] = title
     description = _first(item.get("description"), data.get("description"))
     if description:
         detail["商品描述"] = str(description).strip()
@@ -261,12 +261,12 @@ def parse_item_detail(payload: Any) -> dict:
     )
     images = [build_image_url(i) for i in image_ids if i]
     if images:
-        detail["商品图片列表"] = images
-        detail["商品主图链接"] = images[0]
+        detail["商品圖片列表"] = images
+        detail["商品主圖連結"] = images[0]
 
     single_price = _first(price_block.get("single_value"), item.get("price"))
     if isinstance(single_price, (int, float)) and single_price > 0:
-        detail["当前售价"] = _format_price_range(
+        detail["目前售價"] = _format_price_range(
             _first(price_block.get("range_min"), item.get("price_min")),
             _first(price_block.get("range_max"), item.get("price_max")),
             single_price,
@@ -274,33 +274,33 @@ def parse_item_detail(payload: Any) -> dict:
 
     sold = _first(review.get("historical_sold"), item.get("historical_sold"))
     if sold is not None:
-        detail["已售数量"] = sold
+        detail["已售數量"] = sold
     liked = _first(review.get("liked_count"), item.get("liked_count"))
     if liked is not None:
-        detail["“想要”人数"] = liked
+        detail["“想要”人數"] = liked
     rating_star = _first(
         review.get("rating_star"), (item.get("item_rating") or {}).get("rating_star")
     )
     if rating_star is not None:
-        detail["商品评分"] = round(float(rating_star), 2)
+        detail["商品評分"] = round(float(rating_star), 2)
     total_rating = _first(review.get("total_rating_count"), review.get("cmt_count"))
     if total_rating is not None:
-        detail["评价数量"] = total_rating
+        detail["評價數量"] = total_rating
     stock = _first(item.get("stock"), item.get("normal_stock"))
     if stock is not None:
-        detail["库存"] = stock
+        detail["庫存"] = stock
     if item.get("brand"):
         detail["品牌"] = item["brand"]
     condition = item.get("condition")
     if condition in (1, 2):
-        detail["商品状况"] = "全新" if condition == 1 else "二手"
+        detail["商品狀況"] = "全新" if condition == 1 else "二手"
 
     attributes = _parse_attributes(item)
     if attributes:
-        detail["商品属性"] = attributes
+        detail["商品屬性"] = attributes
     variations = _parse_variations(item)
     if variations:
-        detail["规格列表"] = variations
+        detail["規格列表"] = variations
     return detail
 
 
@@ -314,22 +314,22 @@ def parse_shop_info(payload: Any) -> dict:
         return {}
     account = shop.get("account") or {}
     info = {
-        "卖家ID": str(_first(shop.get("shopid"), shop.get("shop_id"), default="")),
-        "卖家昵称": _first(shop.get("name"), account.get("username"), default="未知賣場"),
-        "卖家账号": account.get("username") or "",
-        "卖场评分": round(float(shop.get("rating_star") or 0), 2),
-        "卖场好评数": shop.get("rating_good", "未知"),
-        "卖场中评数": shop.get("rating_normal", "未知"),
-        "卖场差评数": shop.get("rating_bad", "未知"),
-        "粉丝数": shop.get("follower_count", "未知"),
-        "卖家在售商品数": shop.get("item_count", "未知"),
-        "聊天回应率": (
+        "賣家ID": str(_first(shop.get("shopid"), shop.get("shop_id"), default="")),
+        "賣家暱稱": _first(shop.get("name"), account.get("username"), default="未知賣場"),
+        "賣家帳號": account.get("username") or "",
+        "賣場評分": round(float(shop.get("rating_star") or 0), 2),
+        "賣場好評數": shop.get("rating_good", "未知"),
+        "賣場中評數": shop.get("rating_normal", "未知"),
+        "賣場差評數": shop.get("rating_bad", "未知"),
+        "粉絲數": shop.get("follower_count", "未知"),
+        "賣家在售商品數": shop.get("item_count", "未知"),
+        "聊天回應率": (
             f"{shop['response_rate']}%" if shop.get("response_rate") is not None else "未知"
         ),
-        "卖场所在地": _first(shop.get("shop_location"), shop.get("place"), default="未知"),
-        "是否商城卖家": bool(shop.get("is_official_shop")),
-        "是否虾皮优选": bool(shop.get("is_shopee_verified")),
-        "卖家注册时长": format_join_duration(shop.get("ctime")),
+        "賣場所在地": _first(shop.get("shop_location"), shop.get("place"), default="未知"),
+        "是否商城賣家": bool(shop.get("is_official_shop")),
+        "是否蝦皮優選": bool(shop.get("is_shopee_verified")),
+        "賣家註冊時長": format_join_duration(shop.get("ctime")),
     }
     return info
 
@@ -339,8 +339,9 @@ def matches_region(item: dict, region_filter: str) -> bool:
     parts = [p.strip() for p in (region_filter or "").split("/") if p.strip()]
     if not parts:
         return True
-    location = str(item.get("发货地区") or "")
-    return any(part in location for part in parts)
+    # 蝦皮與使用者輸入可能混用「臺 / 台」，統一後再比對
+    location = str(item.get("出貨地區") or "").replace("臺", "台")
+    return any(part.replace("臺", "台") in location for part in parts)
 
 
 def filter_search_items(
@@ -348,7 +349,7 @@ def filter_search_items(
 ) -> list[dict]:
     filtered = []
     for item in items:
-        if free_shipping and "免運" not in (item.get("商品标签") or []):
+        if free_shipping and "免運" not in (item.get("商品標籤") or []):
             continue
         if not matches_region(item, region_filter):
             continue

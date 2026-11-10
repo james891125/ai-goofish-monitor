@@ -17,7 +17,7 @@ FROM nginx:alpine
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
-# Vite 输出到容器根目录 /dist，而不是 /app/dist
+# Vite 輸出到容器根目錄 /dist，而不是 /app/dist
 COPY --from=builder /dist /usr/share/nginx/html
 
 # Copy custom nginx configuration

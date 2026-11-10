@@ -1,47 +1,23 @@
 """
-通知配置读写与校验服务
+通知配置讀寫與校驗服務
 """
 import json
 from urllib.parse import urlparse
 
 from src.infrastructure.config.env_manager import env_manager
-from src.infrastructure.config.settings import (
-    DEFAULT_TELEGRAM_API_BASE_URL,
-    NotificationSettings,
-)
+from src.infrastructure.config.settings import NotificationSettings
 
 
 NOTIFICATION_FIELD_MAP = {
-    "NTFY_TOPIC_URL": "ntfy_topic_url",
-    "PUSHPLUS_TOKEN": "pushplus_token",
-    "PUSHPLUS_TOPIC": "pushplus_topic",
-    "GOTIFY_URL": "gotify_url",
-    "GOTIFY_TOKEN": "gotify_token",
-    "BARK_URL": "bark_url",
-    "WX_BOT_URL": "wx_bot_url",
-    "TELEGRAM_BOT_TOKEN": "telegram_bot_token",
-    "TELEGRAM_CHAT_ID": "telegram_chat_id",
-    "TELEGRAM_API_BASE_URL": "telegram_api_base_url",
     "WEBHOOK_URL": "webhook_url",
     "WEBHOOK_METHOD": "webhook_method",
     "WEBHOOK_HEADERS": "webhook_headers",
     "WEBHOOK_CONTENT_TYPE": "webhook_content_type",
     "WEBHOOK_QUERY_PARAMETERS": "webhook_query_parameters",
     "WEBHOOK_BODY": "webhook_body",
-    "PCURL_TO_MOBILE": "pcurl_to_mobile",
 }
 
 CHANNEL_NOTIFICATION_FIELDS = {
-    "ntfy": {"NTFY_TOPIC_URL"},
-    "pushplus": {"PUSHPLUS_TOKEN", "PUSHPLUS_TOPIC"},
-    "bark": {"BARK_URL"},
-    "gotify": {"GOTIFY_URL", "GOTIFY_TOKEN"},
-    "wecom": {"WX_BOT_URL"},
-    "telegram": {
-        "TELEGRAM_BOT_TOKEN",
-        "TELEGRAM_CHAT_ID",
-        "TELEGRAM_API_BASE_URL",
-    },
     "webhook": {
         "WEBHOOK_URL",
         "WEBHOOK_METHOD",
@@ -53,13 +29,8 @@ CHANNEL_NOTIFICATION_FIELDS = {
 }
 
 SECRET_NOTIFICATION_FIELDS = {
-    "BARK_URL",
-    "GOTIFY_TOKEN",
-    "WX_BOT_URL",
-    "TELEGRAM_BOT_TOKEN",
     "WEBHOOK_URL",
     "WEBHOOK_HEADERS",
-    "PUSHPLUS_TOKEN",
 }
 
 JSON_NOTIFICATION_FIELDS = {
@@ -69,11 +40,6 @@ JSON_NOTIFICATION_FIELDS = {
 }
 
 URL_FIELDS = {
-    "NTFY_TOPIC_URL",
-    "GOTIFY_URL",
-    "BARK_URL",
-    "WX_BOT_URL",
-    "TELEGRAM_API_BASE_URL",
     "WEBHOOK_URL",
 }
 
@@ -82,7 +48,7 @@ ALLOWED_WEBHOOK_CONTENT_TYPES = {"JSON", "FORM"}
 
 
 class NotificationSettingsValidationError(ValueError):
-    """通知配置校验错误"""
+    """通知配置校驗錯誤"""
 
 
 def model_dump(model, *, exclude_unset: bool = False) -> dict:
@@ -96,26 +62,12 @@ def build_notification_settings_response(
 ) -> dict:
     notification_settings = settings or load_notification_settings()
     response = {
-        "NTFY_TOPIC_URL": notification_settings.ntfy_topic_url or "",
-        "PUSHPLUS_TOKEN": "",
-        "PUSHPLUS_TOPIC": notification_settings.pushplus_topic or "",
-        "GOTIFY_URL": notification_settings.gotify_url or "",
-        "GOTIFY_TOKEN": "",
-        "BARK_URL": "",
-        "WX_BOT_URL": "",
-        "TELEGRAM_BOT_TOKEN": "",
-        "TELEGRAM_CHAT_ID": notification_settings.telegram_chat_id or "",
-        "TELEGRAM_API_BASE_URL": (
-            notification_settings.telegram_api_base_url
-            or DEFAULT_TELEGRAM_API_BASE_URL
-        ),
         "WEBHOOK_URL": "",
         "WEBHOOK_METHOD": notification_settings.webhook_method,
         "WEBHOOK_HEADERS": "",
         "WEBHOOK_CONTENT_TYPE": notification_settings.webhook_content_type,
         "WEBHOOK_QUERY_PARAMETERS": notification_settings.webhook_query_parameters or "",
         "WEBHOOK_BODY": notification_settings.webhook_body or "",
-        "PCURL_TO_MOBILE": notification_settings.pcurl_to_mobile,
     }
     for field in SECRET_NOTIFICATION_FIELDS:
         attr_name = NOTIFICATION_FIELD_MAP[field]
@@ -129,14 +81,6 @@ def build_notification_status_flags(
 ) -> dict:
     notification_settings = settings or load_notification_settings()
     return {
-        "ntfy_topic_url_set": bool(notification_settings.ntfy_topic_url),
-        "pushplus_token_set": bool(notification_settings.pushplus_token),
-        "gotify_url_set": bool(notification_settings.gotify_url),
-        "gotify_token_set": bool(notification_settings.gotify_token),
-        "bark_url_set": bool(notification_settings.bark_url),
-        "wx_bot_url_set": bool(notification_settings.wx_bot_url),
-        "telegram_bot_token_set": bool(notification_settings.telegram_bot_token),
-        "telegram_chat_id_set": bool(notification_settings.telegram_chat_id),
         "webhook_url_set": bool(notification_settings.webhook_url),
         "webhook_headers_set": bool(notification_settings.webhook_headers),
     }
@@ -147,18 +91,6 @@ def build_configured_channels(
 ) -> list[str]:
     notification_settings = settings or load_notification_settings()
     channels = []
-    if notification_settings.ntfy_topic_url:
-        channels.append("ntfy")
-    if notification_settings.pushplus_token:
-        channels.append("pushplus")
-    if notification_settings.bark_url:
-        channels.append("bark")
-    if notification_settings.gotify_url and notification_settings.gotify_token:
-        channels.append("gotify")
-    if notification_settings.wx_bot_url:
-        channels.append("wecom")
-    if notification_settings.telegram_bot_token and notification_settings.telegram_chat_id:
-        channels.append("telegram")
     if notification_settings.webhook_url:
         channels.append("webhook")
     return channels
@@ -212,11 +144,10 @@ def prepare_notification_test_settings(
         return merged_settings
 
     if channel not in CHANNEL_NOTIFICATION_FIELDS:
-        raise NotificationSettingsValidationError(f"不支持的通知渠道: {channel}")
+        raise NotificationSettingsValidationError(f"不支援的通知渠道: {channel}")
 
     current_settings = existing_settings or load_notification_settings()
     included_env_fields = set(CHANNEL_NOTIFICATION_FIELDS[channel])
-    included_env_fields.add("PCURL_TO_MOBILE")
     merged_values = _build_channel_test_values(current_settings, included_env_fields)
 
     for env_name, raw_value in patch_payload.items():
@@ -246,10 +177,8 @@ def _build_channel_test_values(
         attr_name: None
         for attr_name in NOTIFICATION_FIELD_MAP.values()
     }
-    values["telegram_api_base_url"] = DEFAULT_TELEGRAM_API_BASE_URL
     values["webhook_method"] = "POST"
     values["webhook_content_type"] = "JSON"
-    values["pcurl_to_mobile"] = True
 
     for env_name in included_env_fields:
         attr_name = NOTIFICATION_FIELD_MAP[env_name]
@@ -261,26 +190,12 @@ def _build_channel_test_values(
 def load_notification_settings() -> NotificationSettings:
     return _build_notification_settings_model(
         {
-            "ntfy_topic_url": _normalize_existing_text(env_manager.get_value("NTFY_TOPIC_URL")),
-            "pushplus_token": _normalize_existing_text(env_manager.get_value("PUSHPLUS_TOKEN")),
-            "pushplus_topic": _normalize_existing_text(env_manager.get_value("PUSHPLUS_TOPIC")),
-            "gotify_url": _normalize_existing_text(env_manager.get_value("GOTIFY_URL")),
-            "gotify_token": _normalize_existing_text(env_manager.get_value("GOTIFY_TOKEN")),
-            "bark_url": _normalize_existing_text(env_manager.get_value("BARK_URL")),
-            "wx_bot_url": _normalize_existing_text(env_manager.get_value("WX_BOT_URL")),
-            "telegram_bot_token": _normalize_existing_text(env_manager.get_value("TELEGRAM_BOT_TOKEN")),
-            "telegram_chat_id": _normalize_existing_text(env_manager.get_value("TELEGRAM_CHAT_ID")),
-            "telegram_api_base_url": (
-                _normalize_existing_text(env_manager.get_value("TELEGRAM_API_BASE_URL"))
-                or DEFAULT_TELEGRAM_API_BASE_URL
-            ),
             "webhook_url": _normalize_existing_text(env_manager.get_value("WEBHOOK_URL")),
             "webhook_method": _normalize_existing_text(env_manager.get_value("WEBHOOK_METHOD")) or "POST",
             "webhook_headers": _normalize_existing_text(env_manager.get_value("WEBHOOK_HEADERS")),
             "webhook_content_type": _normalize_existing_text(env_manager.get_value("WEBHOOK_CONTENT_TYPE")) or "JSON",
             "webhook_query_parameters": _normalize_existing_text(env_manager.get_value("WEBHOOK_QUERY_PARAMETERS")),
             "webhook_body": _normalize_existing_text(env_manager.get_value("WEBHOOK_BODY")),
-            "pcurl_to_mobile": _env_bool(env_manager.get_value("PCURL_TO_MOBILE"), True),
         }
     )
 
@@ -292,8 +207,6 @@ def _build_notification_settings_model(values: dict) -> NotificationSettings:
 
 
 def _normalize_patch_value(env_name: str, value):
-    if env_name == "PCURL_TO_MOBILE":
-        return bool(value)
     if value is None:
         return None
     text = str(value).strip()
@@ -306,11 +219,6 @@ def _normalize_existing_text(value: str | None) -> str | None:
     text = str(value).strip()
     return text or None
 
-
-def _env_bool(value: str | None, default: bool) -> bool:
-    if value is None:
-        return default
-    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _normalize_notification_values(values: dict) -> dict:
@@ -342,28 +250,15 @@ def _validate_notification_settings(settings: NotificationSettings) -> None:
         if value is not None:
             _validate_http_url(field_name, value)
 
-    _validate_pair(
-        "GOTIFY_URL",
-        settings.gotify_url,
-        "GOTIFY_TOKEN",
-        settings.gotify_token,
-    )
-    _validate_pair(
-        "TELEGRAM_BOT_TOKEN",
-        settings.telegram_bot_token,
-        "TELEGRAM_CHAT_ID",
-        settings.telegram_chat_id,
-    )
-
     if settings.webhook_method not in ALLOWED_WEBHOOK_METHODS:
         allowed = ", ".join(sorted(ALLOWED_WEBHOOK_METHODS))
         raise NotificationSettingsValidationError(
-            f"WEBHOOK_METHOD 仅支持: {allowed}"
+            f"WEBHOOK_METHOD 僅支援: {allowed}"
         )
     if settings.webhook_content_type not in ALLOWED_WEBHOOK_CONTENT_TYPES:
         allowed = ", ".join(sorted(ALLOWED_WEBHOOK_CONTENT_TYPES))
         raise NotificationSettingsValidationError(
-            f"WEBHOOK_CONTENT_TYPE 仅支持: {allowed}"
+            f"WEBHOOK_CONTENT_TYPE 僅支援: {allowed}"
         )
 
     has_webhook_extras = any(
@@ -375,14 +270,14 @@ def _validate_notification_settings(settings: NotificationSettings) -> None:
     )
     if has_webhook_extras and not settings.webhook_url:
         raise NotificationSettingsValidationError(
-            "配置 Webhook 高级参数前必须先填写 WEBHOOK_URL"
+            "配置 Webhook 高階參數前必須先填寫 WEBHOOK_URL"
         )
 
     if settings.webhook_content_type == "FORM" and settings.webhook_body:
         parsed_body = json.loads(settings.webhook_body)
         if not isinstance(parsed_body, dict):
             raise NotificationSettingsValidationError(
-                "WEBHOOK_BODY 在 FORM 模式下必须是 JSON 对象"
+                "WEBHOOK_BODY 在 FORM 模式下必須是 JSON 物件"
             )
 
 
@@ -390,21 +285,9 @@ def _validate_http_url(field_name: str, value: str) -> None:
     parsed = urlparse(value)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise NotificationSettingsValidationError(
-            f"{field_name} 必须是合法的 HTTP/HTTPS URL"
+            f"{field_name} 必須是合法的 HTTP/HTTPS URL"
         )
 
-
-def _validate_pair(
-    left_name: str,
-    left_value: str | None,
-    right_name: str,
-    right_value: str | None,
-) -> None:
-    if bool(left_value) == bool(right_value):
-        return
-    raise NotificationSettingsValidationError(
-        f"{left_name} 与 {right_name} 必须成对配置"
-    )
 
 
 def _parse_json_field(
@@ -420,6 +303,6 @@ def _parse_json_field(
         ) from exc
     if expect_dict and not isinstance(parsed, dict):
         raise NotificationSettingsValidationError(
-            f"{field_name} 必须是 JSON 对象"
+            f"{field_name} 必須是 JSON 物件"
         )
     return parsed

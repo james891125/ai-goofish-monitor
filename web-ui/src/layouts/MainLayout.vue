@@ -17,7 +17,7 @@ const { t } = useI18n()
       {{ t('common.skipToContent') }}
     </a>
 
-    <!-- 背景装饰渐变 -->
+    <!-- 背景裝飾漸變 -->
     <div aria-hidden="true" class="fixed inset-0 pointer-events-none overflow-hidden">
       <div class="absolute -top-[10%] -left-[10%] h-[40%] w-[40%] rounded-full bg-primary/5 blur-[120px] animate-pulse motion-reduce:animate-none"></div>
       <div class="absolute top-[20%] -right-[5%] w-[30%] h-[35%] rounded-full bg-blue-400/5 blur-[100px]"></div>

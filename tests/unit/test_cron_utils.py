@@ -10,17 +10,17 @@ def test_validate_cron_expression_accepts_six_fields():
 
 
 def test_build_cron_trigger_accepts_alias_and_timezone():
-    trigger = build_cron_trigger("@hourly", timezone="Asia/Shanghai")
+    trigger = build_cron_trigger("@hourly", timezone="Asia/Taipei")
 
     assert trigger is not None
-    assert str(trigger.timezone) == "Asia/Shanghai"
+    assert str(trigger.timezone) == "Asia/Taipei"
 
 
 def test_validate_cron_expression_rejects_invalid_value():
     try:
         validate_cron_expression("not-a-cron")
     except ValueError as exc:
-        assert "支持 5 段" in str(exc)
+        assert "支援 5 段" in str(exc)
         return
 
-    raise AssertionError("非法 cron 应该抛出 ValueError")
+    raise AssertionError("非法 cron 應該丟擲 ValueError")

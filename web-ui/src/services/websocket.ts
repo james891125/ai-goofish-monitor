@@ -8,15 +8,15 @@ class WebSocketService {
   private shouldConnect = false;
 
   constructor() {
-    // 延迟连接，等待认证完成
-    // 只有在已登录时才尝试连接
+    // 延遲連線，等待認證完成
+    // 只有在已登入時才嘗試連線
     if (localStorage.getItem('auth_logged_in') === 'true') {
       this.connect();
     }
   }
 
   public start() {
-    // 手动启动 WebSocket 连接
+    // 手動啟動 WebSocket 連線
     this.shouldConnect = true;
     if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
       this.connect();
@@ -24,7 +24,7 @@ class WebSocketService {
   }
 
   public stop() {
-    // 停止 WebSocket 连接
+    // 停止 WebSocket 連線
     this.shouldConnect = false;
     if (this.ws) {
       this.ws.close();
@@ -66,7 +66,7 @@ class WebSocketService {
         this.isConnected = false;
         this.emit('disconnected', { isConnected: false });
       }
-      // 只有在 shouldConnect 为 true 或已登录时才重连
+      // 只有在 shouldConnect 為 true 或已登入時才重連
       if (this.shouldConnect || localStorage.getItem('auth_logged_in') === 'true') {
         setTimeout(() => this.connect(), this.reconnectInterval);
       }

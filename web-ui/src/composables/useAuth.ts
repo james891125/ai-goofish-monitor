@@ -18,7 +18,7 @@ export function useAuth() {
     localStorage.setItem('auth_username', user)
     localStorage.setItem('auth_logged_in', 'true')
 
-    // 启动 WebSocket 连接
+    // 啟動 WebSocket 連線
     wsService.start()
   }
 
@@ -28,7 +28,7 @@ export function useAuth() {
     localStorage.removeItem('auth_username')
     localStorage.removeItem('auth_logged_in')
 
-    // 停止 WebSocket 连接
+    // 停止 WebSocket 連線
     wsService.stop()
 
     // Redirect to login if using router

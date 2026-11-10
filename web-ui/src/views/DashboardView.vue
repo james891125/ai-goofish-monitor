@@ -83,21 +83,21 @@ const insightCards = computed(() => {
   return [
     {
       label: t('results.insights.currentAvg'),
-      value: market?.avg_price ? `¥${market.avg_price}` : '—',
+      value: market?.avg_price ? `NT$${market.avg_price}` : '—',
       hint: market
         ? t('results.insights.sampleCount', { count: market.sample_count })
         : t('results.grid.empty'),
     },
     {
       label: t('results.insights.historyAvg'),
-      value: history?.avg_price ? `¥${history.avg_price}` : '—',
+      value: history?.avg_price ? `NT$${history.avg_price}` : '—',
       hint: history
         ? t('results.insights.uniqueItems', { count: history.unique_items })
         : t('results.insights.noSnapshot'),
     },
     {
       label: t('results.card.marketAvg'),
-      value: market?.min_price ? `¥${market.min_price}` : '—',
+      value: market?.min_price ? `NT$${market.min_price}` : '—',
       hint: market?.max_price
         ? t('results.insights.highestPrice', { price: market.max_price })
         : t('results.insights.noRange'),
@@ -212,19 +212,19 @@ function openActivity(activity: { filename: string | null; type: string }) {
               <div class="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 {{ t('dashboard.focus.currentMedian') }}
                 <span class="font-semibold text-slate-900">
-                  {{ focusInsights?.market_summary.median_price ? `¥${focusInsights.market_summary.median_price}` : '—' }}
+                  {{ focusInsights?.market_summary.median_price ? `NT$${focusInsights.market_summary.median_price}` : '—' }}
                 </span>
               </div>
               <div class="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 {{ t('dashboard.focus.historyMin') }}
                 <span class="font-semibold text-slate-900">
-                  {{ focusInsights?.history_summary.min_price ? `¥${focusInsights.history_summary.min_price}` : '—' }}
+                  {{ focusInsights?.history_summary.min_price ? `NT$${focusInsights.history_summary.min_price}` : '—' }}
                 </span>
               </div>
               <div class="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 {{ t('dashboard.focus.historyMax') }}
                 <span class="font-semibold text-slate-900">
-                  {{ focusInsights?.history_summary.max_price ? `¥${focusInsights.history_summary.max_price}` : '—' }}
+                  {{ focusInsights?.history_summary.max_price ? `NT$${focusInsights.history_summary.max_price}` : '—' }}
                 </span>
               </div>
             </div>

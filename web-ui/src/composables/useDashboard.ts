@@ -29,7 +29,7 @@ function buildSuggestion(
     taskName: focusTask.task_name,
     keyword: focusTask.keyword,
     maxPages: String(Math.max(3, focusTask.total_items > 80 ? 5 : 4)),
-    newPublishOption: focusTask.recommended_items > 0 ? '1天内' : '最新',
+    newPublishOption: focusTask.recommended_items > 0 ? '1天內' : '最新',
     freeShipping: 'true',
     personalOnly: 'true',
   }

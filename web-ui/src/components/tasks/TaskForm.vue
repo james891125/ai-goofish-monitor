@@ -35,7 +35,7 @@ const selectedAccountStateFile = ref(AUTO_ACCOUNT_VALUE)
 const keywordRulesInput = ref('')
 const cronMode = ref<'preset' | 'custom'>('preset')
 
-// 常用 cron 预设选项
+// 常用 cron 預設選項
 const cronPresets = computed(() => [
   { value: EMPTY_CRON_VALUE, label: t('tasks.form.cron.manual') },
   { value: '*/5 * * * *', label: t('tasks.form.cron.every5Minutes') },
@@ -53,16 +53,16 @@ const cronPresets = computed(() => [
   { value: '0 10 * * 6,0', label: t('tasks.form.cron.weekend10') },
 ])
 
-// 判断 cron 值是否为预设值
+// 判斷 cron 值是否為預設值
 function isPresetCronValue(value: string): boolean {
   if (!value) return true
   return cronPresets.value.some((preset) => preset.value === value)
 }
 
-// 判断当前 cron 是否为预设值
+// 判斷目前 cron 是否為預設值
 const isPresetCron = computed(() => isPresetCronValue(form.value.cron))
 
-// 预设选择的值
+// 預設選擇的值
 const presetCronValue = computed({
   get: () => {
     if (!isPresetCron.value) return EMPTY_CRON_VALUE
@@ -115,7 +115,7 @@ watch(() => [props.mode, props.initialData, props.defaultValues, props.defaultAc
       decision_mode: defaultValues.decision_mode || props.initialData.decision_mode || 'ai',
     }
     keywordRulesInput.value = (defaultValues.keyword_rules || props.initialData.keyword_rules || []).join('\n')
-    // 编辑模式下，根据 cron 值判断模式
+    // 編輯模式下，根據 cron 值判斷模式
     const cronVal = defaultValues.cron ?? props.initialData.cron ?? ''
     cronMode.value = isPresetCronValue(cronVal) ? 'preset' : 'custom'
   } else {
@@ -150,7 +150,7 @@ watch(() => [props.mode, props.initialData, props.defaultValues, props.defaultAc
     if (defaultValues.keyword_rules && defaultValues.keyword_rules.length > 0) {
       keywordRulesInput.value = defaultValues.keyword_rules.join('\n')
     }
-    // 创建模式下，根据默认值判断模式
+    // 建立模式下，根據預設值判斷模式
     const cronVal = defaultValues.cron ?? ''
     cronMode.value = isPresetCronValue(cronVal) ? 'preset' : 'custom'
   }
@@ -421,10 +421,10 @@ function handleSubmit() {
             <SelectContent>
               <SelectItem value="__none__">{{ t('tasks.form.publishOptions.none') }}</SelectItem>
               <SelectItem value="最新">{{ t('tasks.form.publishOptions.latest') }}</SelectItem>
-              <SelectItem value="1天内">{{ t('tasks.form.publishOptions.oneDay') }}</SelectItem>
-              <SelectItem value="3天内">{{ t('tasks.form.publishOptions.threeDays') }}</SelectItem>
-              <SelectItem value="7天内">{{ t('tasks.form.publishOptions.sevenDays') }}</SelectItem>
-              <SelectItem value="14天内">{{ t('tasks.form.publishOptions.fourteenDays') }}</SelectItem>
+              <SelectItem value="1天內">{{ t('tasks.form.publishOptions.oneDay') }}</SelectItem>
+              <SelectItem value="3天內">{{ t('tasks.form.publishOptions.threeDays') }}</SelectItem>
+              <SelectItem value="7天內">{{ t('tasks.form.publishOptions.sevenDays') }}</SelectItem>
+              <SelectItem value="14天內">{{ t('tasks.form.publishOptions.fourteenDays') }}</SelectItem>
             </SelectContent>
           </Select>
         </div>

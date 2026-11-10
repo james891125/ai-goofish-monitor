@@ -1,5 +1,5 @@
 """
-SQLite 连接与 schema 初始化。
+SQLite 連線與 schema 初始化。
 """
 from __future__ import annotations
 
@@ -147,7 +147,7 @@ def init_schema(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_result_items_status(conn: sqlite3.Connection) -> None:
-    """为 result_items 表添加 status 列（仅执行一次）。"""
+    """為 result_items 表新增 status 列（僅執行一次）。"""
     row = conn.execute(
         "SELECT value FROM app_metadata WHERE key = 'migration:result_items_status'"
     ).fetchone()

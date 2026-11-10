@@ -16,7 +16,7 @@ This Chrome extension helps extract complete login state information from Shopee
 3. Click the extension icon in the toolbar
 4. Click "Extract Login State" (collects cookies + environment + headers，自动过滤无用/超大字段)
 5. The complete JSON will be displayed - click "Copy to Clipboard"
-6. Save the JSON文本到 `xianyu_state.json`（或自定义文件名）即可
+6. Save the JSON文本到 the monitor: paste it into the Accounts page of the web UI
 
 ## Features
 

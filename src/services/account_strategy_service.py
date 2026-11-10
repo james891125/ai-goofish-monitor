@@ -1,5 +1,5 @@
 """
-账号策略辅助函数
+帳號策略輔助函式
 """
 from typing import Optional
 

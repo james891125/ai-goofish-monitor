@@ -48,7 +48,7 @@ def test_generate_criteria_drops_think_blocks_and_raises_output_limit(monkeypatc
 
         async def _call_ai(self, *_args, **kwargs):
             captured.update(kwargs)
-            return "<think>先分析需求</think>\n\n一票否决：电池健康度不足"
+            return "<think>先分析需求</think>\n\n一票否決：電池健康度不足"
 
         async def close(self):
             return None
@@ -59,7 +59,7 @@ def test_generate_criteria_drops_think_blocks_and_raises_output_limit(monkeypatc
         prompt_utils.generate_criteria("need a watch", str(reference_file))
     )
 
-    assert result == "一票否决：电池健康度不足"
+    assert result == "一票否決：電池健康度不足"
     assert captured["max_output_tokens"] == prompt_utils.CRITERIA_MAX_OUTPUT_TOKENS
     assert captured["max_output_tokens"] > 800
 
@@ -76,14 +76,14 @@ def test_generate_criteria_rejects_truncated_think_block(monkeypatch, tmp_path):
             raise AssertionError("refresh should not be called")
 
         async def _call_ai(self, *_args, **_kwargs):
-            return "<think>输出到这里被截断"
+            return "<think>輸出到這裡被截斷"
 
         async def close(self):
             return None
 
     monkeypatch.setattr(prompt_utils, "AIClient", FakeAIClient)
 
-    with pytest.raises(RuntimeError, match="思考过程占满了输出长度"):
+    with pytest.raises(RuntimeError, match="思考過程佔滿了輸出長度"):
         asyncio.run(prompt_utils.generate_criteria("need a watch", str(reference_file)))
 
 
@@ -100,14 +100,14 @@ def test_generate_criteria_closes_ai_client_after_ai_failure(monkeypatch, tmp_pa
             raise AssertionError("refresh should not be called")
 
         async def _call_ai(self, *_args, **_kwargs):
-            raise EmptyAIResponseError("AI响应内容为空。")
+            raise EmptyAIResponseError("AI響應內容為空。")
 
         async def close(self):
             close_state["closed"] = True
 
     monkeypatch.setattr(prompt_utils, "AIClient", FakeAIClient)
 
-    with pytest.raises(EmptyAIResponseError, match="AI响应内容为空"):
+    with pytest.raises(EmptyAIResponseError, match="AI響應內容為空"):
         asyncio.run(prompt_utils.generate_criteria("need a gpu", str(reference_file)))
 
     assert close_state["closed"] is True

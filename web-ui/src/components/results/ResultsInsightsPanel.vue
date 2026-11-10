@@ -18,17 +18,17 @@ const summaryCards = computed(() => {
   return [
     {
       label: t('results.insights.currentAvg'),
-      value: market.avg_price ? `¥${market.avg_price}` : '—',
+      value: market.avg_price ? `NT$${market.avg_price}` : '—',
       hint: t('results.insights.sampleCount', { count: market.sample_count || 0 }),
     },
     {
       label: t('results.insights.historyAvg'),
-      value: history.avg_price ? `¥${history.avg_price}` : '—',
+      value: history.avg_price ? `NT$${history.avg_price}` : '—',
       hint: t('results.insights.uniqueItems', { count: history.unique_items || 0 }),
     },
     {
       label: t('results.insights.currentMin'),
-      value: market.min_price ? `¥${market.min_price}` : '—',
+      value: market.min_price ? `NT$${market.min_price}` : '—',
       hint: market.max_price
         ? t('results.insights.highestPrice', { price: market.max_price })
         : t('results.insights.noRange'),
@@ -96,19 +96,19 @@ const latestSnapshotText = computed(() => {
             <div class="rounded-2xl bg-slate-50 px-4 py-3">
               {{ t('results.insights.currentMedian') }}
               <span class="font-semibold text-slate-900">
-                {{ insights?.market_summary.median_price ? `¥${insights.market_summary.median_price}` : '—' }}
+                {{ insights?.market_summary.median_price ? `NT$${insights.market_summary.median_price}` : '—' }}
               </span>
             </div>
             <div class="rounded-2xl bg-slate-50 px-4 py-3">
               {{ t('results.insights.historyMin') }}
               <span class="font-semibold text-slate-900">
-                {{ insights?.history_summary.min_price ? `¥${insights.history_summary.min_price}` : '—' }}
+                {{ insights?.history_summary.min_price ? `NT$${insights.history_summary.min_price}` : '—' }}
               </span>
             </div>
             <div class="rounded-2xl bg-slate-50 px-4 py-3">
               {{ t('results.insights.historyMax') }}
               <span class="font-semibold text-slate-900">
-                {{ insights?.history_summary.max_price ? `¥${insights.history_summary.max_price}` : '—' }}
+                {{ insights?.history_summary.max_price ? `NT$${insights.history_summary.max_price}` : '—' }}
               </span>
             </div>
           </div>

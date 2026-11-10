@@ -1,5 +1,5 @@
 """
-任务运行日志清理服务。
+任務執行日誌清理服務。
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def cleanup_task_logs(
     now: datetime | None = None,
 ) -> list[str]:
     if keep_days < 1:
-        print(f"任务日志清理已跳过：保留天数配置无效 ({keep_days})")
+        print(f"任務日誌清理已跳過：保留天數配置無效 ({keep_days})")
         return []
 
     root = Path(logs_dir)
@@ -31,7 +31,7 @@ def cleanup_task_logs(
         try:
             modified_at = datetime.fromtimestamp(path.stat().st_mtime)
         except OSError as exc:
-            print(f"读取任务日志时间失败，已跳过: {path} ({exc})")
+            print(f"讀取任務日誌時間失敗，已跳過: {path} ({exc})")
             continue
 
         if modified_at >= cutoff:
@@ -41,11 +41,11 @@ def cleanup_task_logs(
             path.unlink()
             removed_files.append(str(path))
         except OSError as exc:
-            print(f"删除历史任务日志失败，已跳过: {path} ({exc})")
+            print(f"刪除歷史任務日誌失敗，已跳過: {path} ({exc})")
 
     if removed_files:
         print(
-            f"任务日志清理完成：已删除 {len(removed_files)} 个超过 {keep_days} 天的历史日志文件。"
+            f"任務日誌清理完成：已刪除 {len(removed_files)} 個超過 {keep_days} 天的歷史日誌檔案。"
         )
 
     return removed_files

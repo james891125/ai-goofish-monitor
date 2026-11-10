@@ -1,6 +1,6 @@
 """
-通知服务
-统一管理所有通知渠道
+通知服務
+統一管理所有通知渠道
 """
 import asyncio
 from typing import Dict, List
@@ -12,7 +12,7 @@ from src.infrastructure.config.settings import NotificationSettings
 
 
 class NotificationService:
-    """通知服务"""
+    """通知服務"""
 
     def __init__(self, clients: List[NotificationClient]):
         self.clients = [client for client in clients if client.is_enabled()]
@@ -23,10 +23,10 @@ class NotificationService:
         reason: str,
     ) -> Dict[str, Dict[str, str | bool]]:
         """
-        发送通知到所有启用的渠道
+        傳送通知到所有啟用的渠道
 
         Returns:
-            各渠道发送结果，包含成功状态和消息
+            各渠道傳送結果，包含成功狀態和訊息
         """
         if not self.clients:
             return {}
@@ -40,13 +40,13 @@ class NotificationService:
 
     async def send_test_notification(self) -> Dict[str, Dict[str, str | bool]]:
         test_product = {
-            "商品标题": "[测试通知] 闲鱼智能监控",
-            "当前售价": "0",
-            "商品链接": "https://shopee.tw/",
+            "商品標題": "[測試通知] 蝦皮智慧監控",
+            "目前售價": "0",
+            "商品連結": "https://shopee.tw/",
         }
         return await self.send_notification(
             test_product,
-            "这是一条测试通知，用于验证推送渠道是否可用。",
+            "這是一條測試通知，用於驗證推送渠道是否可用。",
         )
 
     async def _send_with_result(
@@ -61,7 +61,7 @@ class NotificationService:
                 "channel": client.channel_key,
                 "label": client.display_name,
                 "success": True,
-                "message": "发送成功",
+                "message": "傳送成功",
             }
         except Exception as exc:
             return {

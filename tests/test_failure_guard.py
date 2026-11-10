@@ -7,14 +7,14 @@ from src.failure_guard import FailureGuard
 
 def test_failure_guard_opens_circuit_after_threshold_and_rate_limits(tmp_path):
     guard_path = tmp_path / "guard.json"
-    cookie_path = tmp_path / "xianyu_state.json"
+    cookie_path = tmp_path / "shopee_state.json"
     cookie_path.write_text("{}", encoding="utf-8")
 
     guard = FailureGuard(
         path=str(guard_path),
         threshold=3,
         pause_seconds=3 * 24 * 60 * 60,
-        tz_name="Asia/Shanghai",
+        tz_name="Asia/Taipei",
     )
 
     base = datetime(2026, 3, 4, 12, 0, 0)
@@ -48,14 +48,14 @@ def test_failure_guard_opens_circuit_after_threshold_and_rate_limits(tmp_path):
 
 def test_failure_guard_auto_recovers_on_cookie_change(tmp_path):
     guard_path = tmp_path / "guard.json"
-    cookie_path = tmp_path / "xianyu_state.json"
+    cookie_path = tmp_path / "shopee_state.json"
     cookie_path.write_text("{}", encoding="utf-8")
 
     guard = FailureGuard(
         path=str(guard_path),
         threshold=2,
         pause_seconds=3 * 24 * 60 * 60,
-        tz_name="Asia/Shanghai",
+        tz_name="Asia/Taipei",
     )
 
     base = datetime(2026, 3, 4, 12, 0, 0)

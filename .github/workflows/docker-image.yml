@@ -73,8 +73,8 @@ jobs:
           pull: true
           push: true
           tags: ${{ steps.prepare.outputs.base_tags }}
-          # mode=max 会把 Chromium 和 apt 中间层打进同一条 cache。amd64+arm64 容易超过
-          # GitHub Actions 单条 cache 10GB 上限，reserve 失败会取消已经构建好的镜像推送。
+          # mode=max 會把 Chromium 和 apt 中間層打進同一條 cache。amd64+arm64 容易超過
+          # GitHub Actions 單條 cache 10GB 上限，reserve 失敗會取消已經構建好的映象推送。
           cache-from: type=gha,scope=ai-goofish-base-docker
           cache-to: type=gha,scope=ai-goofish-base-docker,mode=min,ignore-error=true
 

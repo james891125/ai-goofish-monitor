@@ -1,5 +1,5 @@
 """
-Dashboard 数据拼装辅助函数
+Dashboard 資料拼裝輔助函式
 """
 from __future__ import annotations
 
@@ -119,7 +119,7 @@ def _resolve_task(
     task = task_lookup.get(normalize_text(keyword))
     if task is not None or latest_record is None:
         return task
-    fallback_name = str(latest_record.get("任务名称") or "")
+    fallback_name = str(latest_record.get("任務名稱") or "")
     return next(
         (candidate for candidate in task_lookup.values() if candidate.task_name == fallback_name),
         None,
@@ -135,7 +135,7 @@ def _collect_record_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     keyword_recommended_items = 0
 
     for record in records:
-        crawl_time = parse_timestamp(record.get("爬取时间"))
+        crawl_time = parse_timestamp(record.get("爬取時間"))
         if crawl_time and (latest_crawl_time is None or crawl_time > latest_crawl_time):
             latest_crawl_time = crawl_time
             latest_record = record
@@ -152,7 +152,7 @@ def _collect_record_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
             keyword_recommended_items += 1
 
         recommendation_time = parse_timestamp(
-            latest_recommendation.get("爬取时间") if latest_recommendation else None
+            latest_recommendation.get("爬取時間") if latest_recommendation else None
         )
         if latest_recommendation is None or (crawl_time and recommendation_time and crawl_time > recommendation_time):
             latest_recommendation = record
@@ -179,12 +179,12 @@ def _build_recommendation_activity(
     if not latest_recommendation:
         return None, None, None
 
-    product = latest_recommendation.get("商品信息", {}) or {}
+    product = latest_recommendation.get("商品資訊", {}) or {}
     analysis = latest_recommendation.get("ai_analysis", {}) or {}
-    title = str(product.get("商品标题") or "发现推荐商品")
-    price = parse_price_value(product.get("当前售价"))
-    status = "AI 推荐" if analysis.get("analysis_source") == "ai" else "关键词命中"
-    detail = f"当前价 ¥{price:.0f}" if isinstance(price, (int, float)) else None
+    title = str(product.get("商品標題") or "發現推薦商品")
+    price = parse_price_value(product.get("目前售價"))
+    status = "AI 推薦" if analysis.get("analysis_source") == "ai" else "關鍵詞命中"
+    detail = f"目前價 NT${price:.0f}" if isinstance(price, (int, float)) else None
     activity = build_activity(
         activity_id=f"{filename}:recommended",
         activity_type="recommendation",
@@ -192,7 +192,7 @@ def _build_recommendation_activity(
         keyword=keyword,
         title=title,
         status=status,
-        timestamp=parse_timestamp(latest_recommendation.get("爬取时间")),
+        timestamp=parse_timestamp(latest_recommendation.get("爬取時間")),
         detail=detail,
         filename=filename,
     )
@@ -209,17 +209,17 @@ def _build_scan_activity(
 ) -> dict[str, Any] | None:
     if not latest_record:
         return None
-    product = latest_record.get("商品信息", {}) or {}
-    title = str(product.get("商品标题") or task_name)
+    product = latest_record.get("商品資訊", {}) or {}
+    title = str(product.get("商品標題") or task_name)
     return build_activity(
         activity_id=f"{filename}:scan",
         activity_type="scan",
         task_name=task_name,
         keyword=keyword,
         title=title,
-        status="结果已更新",
-        timestamp=parse_timestamp(latest_record.get("爬取时间")),
-        detail=f"已累计 {total_items} 条样本",
+        status="結果已更新",
+        timestamp=parse_timestamp(latest_record.get("爬取時間")),
+        detail=f"已累計 {total_items} 條樣本",
         filename=filename,
     )
 
@@ -234,9 +234,9 @@ async def summarize_result_file(
 
     latest_record = metrics["latest_record"]
     latest_crawl_time = parse_timestamp(metrics["latest_crawl_time"])
-    keyword = str((latest_record or {}).get("搜索关键字") or "") or normalize_keyword_from_filename(filename)
+    keyword = str((latest_record or {}).get("搜尋關鍵字") or "") or normalize_keyword_from_filename(filename)
     task = _resolve_task(task_lookup, latest_record, keyword)
-    task_name = task.task_name if task else str((latest_record or {}).get("任务名称") or keyword)
+    task_name = task.task_name if task else str((latest_record or {}).get("任務名稱") or keyword)
     summary = build_empty_summary(task) if task else _build_fallback_summary(task_name, keyword)
 
     activities: list[dict[str, Any]] = []
@@ -277,8 +277,8 @@ async def summarize_result_file(
 def build_task_state_activities(tasks: list[Task]) -> list[dict[str, Any]]:
     activities: list[dict[str, Any]] = []
     for task in tasks:
-        status = "运行中" if task.is_running else "已启用"
-        detail = "任务正在轮询闲鱼结果" if task.is_running else "等待下一次调度执行"
+        status = "執行中" if task.is_running else "已啟用"
+        detail = "任務正在輪詢蝦皮結果" if task.is_running else "等待下一次排程執行"
         if not task.is_running and not task.enabled:
             continue
         activities.append(

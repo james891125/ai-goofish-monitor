@@ -1,5 +1,5 @@
 """
-结果文件管理路由
+結果檔案管理路由
 """
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
@@ -48,17 +48,17 @@ def _build_download_headers(export_name: str) -> dict[str, str]:
 
 @router.get("/files")
 async def get_result_files():
-    """获取所有结果文件列表"""
+    """獲取所有結果檔案列表"""
     return {"files": await list_result_filenames()}
 
 
 @router.get("/files/{filename:path}")
 async def download_result_file(filename: str):
-    """下载指定的结果文件"""
+    """下載指定的結果檔案"""
     if ".." in filename or filename.startswith("/"):
-        return {"error": "非法的文件路径"}
+        return {"error": "非法的檔案路徑"}
     if not filename.endswith(".jsonl") or not await result_file_exists(filename):
-        return {"error": "文件不存在"}
+        return {"error": "檔案不存在"}
     return Response(
         content=await build_result_ndjson(filename),
         media_type="application/x-ndjson",
@@ -68,15 +68,15 @@ async def download_result_file(filename: str):
 
 @router.delete("/files/{filename:path}")
 async def delete_result_file(filename: str):
-    """删除指定的结果文件"""
+    """刪除指定的結果檔案"""
     if ".." in filename or filename.startswith("/"):
-        raise HTTPException(status_code=400, detail="非法的文件路径")
+        raise HTTPException(status_code=400, detail="非法的檔案路徑")
     if not filename.endswith(".jsonl"):
-        raise HTTPException(status_code=400, detail="只能删除 .jsonl 文件")
+        raise HTTPException(status_code=400, detail="只能刪除 .jsonl 檔案")
     deleted_rows = await delete_result_file_records(filename)
     if deleted_rows <= 0:
-        raise HTTPException(status_code=404, detail="文件不存在")
-    return {"message": f"文件 {filename} 已成功删除"}
+        raise HTTPException(status_code=404, detail="檔案不存在")
+    return {"message": f"檔案 {filename} 已成功刪除"}
 
 
 @router.get("/{filename}")
@@ -84,16 +84,16 @@ async def get_result_file_content(
     filename: str,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    recommended_only: bool = Query(False),  # 兼容旧参数，等价于 ai_recommended_only
+    recommended_only: bool = Query(False),  # 相容舊參數，等價於 ai_recommended_only
     ai_recommended_only: bool = Query(False),
     keyword_recommended_only: bool = Query(False),
     include_hidden: bool = Query(False),
     sort_by: str = Query("crawl_time"),
     sort_order: str = Query("desc"),
 ):
-    """读取指定的 .jsonl 文件内容，支持分页、筛选和排序"""
+    """讀取指定的 .jsonl 檔案內容，支援分頁、篩選和排序"""
     if ai_recommended_only and keyword_recommended_only:
-        raise HTTPException(status_code=400, detail="AI推荐筛选与关键词推荐筛选不能同时开启。")
+        raise HTTPException(status_code=400, detail="AI推薦篩選與關鍵詞推薦篩選不能同時開啟。")
 
     if recommended_only and not ai_recommended_only and not keyword_recommended_only:
         ai_recommended_only = True
@@ -113,9 +113,9 @@ async def get_result_file_content(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"读取结果文件时出错: {exc}")
+        raise HTTPException(status_code=500, detail=f"讀取結果檔案時出錯: {exc}")
     if total_items <= 0 and not await result_file_exists(filename):
-        raise HTTPException(status_code=404, detail="结果文件未找到")
+        raise HTTPException(status_code=404, detail="結果檔案未找到")
     paginated_results = enrich_records_with_price_insight(items, filename)
 
     return {
@@ -148,7 +148,7 @@ async def export_result_file_content(
     sort_order: str = Query("desc"),
 ):
     if ai_recommended_only and keyword_recommended_only:
-        raise HTTPException(status_code=400, detail="AI推荐筛选与关键词推荐筛选不能同时开启。")
+        raise HTTPException(status_code=400, detail="AI推薦篩選與關鍵詞推薦篩選不能同時開啟。")
     if recommended_only and not ai_recommended_only and not keyword_recommended_only:
         ai_recommended_only = True
 
@@ -168,9 +168,9 @@ async def export_result_file_content(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"导出结果文件时出错: {exc}")
+        raise HTTPException(status_code=500, detail=f"匯出結果檔案時出錯: {exc}")
     if not results and not await result_file_exists(filename):
-        raise HTTPException(status_code=404, detail="结果文件未找到")
+        raise HTTPException(status_code=404, detail="結果檔案未找到")
 
     export_name = filename.replace(".jsonl", ".csv")
     headers = _build_download_headers(export_name)
@@ -193,7 +193,7 @@ class BlacklistRulesRequest(BaseModel):
 
 @router.patch("/{filename}/items/{item_id}/status")
 async def patch_item_status(filename: str, item_id: str, body: UpdateStatusRequest):
-    """更新指定商品的状态（active/hidden/expired）"""
+    """更新指定商品的狀態（active/hidden/expired）"""
     try:
         validate_result_filename(filename)
         updated = await update_item_status(filename, item_id, body.status.value)
@@ -201,7 +201,7 @@ async def patch_item_status(filename: str, item_id: str, body: UpdateStatusReque
             raise HTTPException(status_code=404, detail="商品未找到")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return {"message": "状态已更新", "status": body.status.value}
+    return {"message": "狀態已更新", "status": body.status.value}
 
 
 @router.get("/{filename}/blacklist-rules")
@@ -221,4 +221,4 @@ async def put_result_blacklist_rules(filename: str, body: BlacklistRulesRequest)
         keywords = await save_result_blacklist_keywords(filename, body.keywords)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return {"message": "黑名单规则已更新", "keywords": keywords}
+    return {"message": "黑名單規則已更新", "keywords": keywords}

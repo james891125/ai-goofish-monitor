@@ -1,5 +1,5 @@
 """
-任务生成作业模型
+任務生成作業模型
 """
 from typing import List, Literal, Optional
 
@@ -13,7 +13,7 @@ TaskGenerationStepStatus = Literal["pending", "running", "completed", "failed"]
 
 
 class TaskGenerationStep(BaseModel):
-    """单个任务生成步骤"""
+    """單個任務生成步驟"""
 
     key: str
     label: str
@@ -22,12 +22,12 @@ class TaskGenerationStep(BaseModel):
 
 
 class TaskGenerationJob(BaseModel):
-    """任务生成作业"""
+    """任務生成作業"""
 
     job_id: str
     task_name: str
     status: TaskGenerationStatus = "queued"
-    message: str = "任务已排队，等待开始。"
+    message: str = "任務已排隊，等待開始。"
     current_step: Optional[str] = None
     steps: List[TaskGenerationStep] = Field(default_factory=list)
     task: Optional[Task] = None

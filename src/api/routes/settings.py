@@ -1,5 +1,5 @@
 """
-设置管理路由
+設定管理路由
 """
 import os
 from typing import Optional
@@ -40,7 +40,8 @@ from src.services.process_service import ProcessService
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 AI_TEST_PROMPT = "Reply with OK only."
-AI_TEST_MAX_OUTPUT_TOKENS = 32
+# 留足空間給會先「思考」的模型（例如 Gemini 2.5），避免測試時回傳空內容
+AI_TEST_MAX_OUTPUT_TOKENS = 512
 
 
 def _reload_env() -> None:
@@ -70,36 +71,25 @@ def _normalize_bool_value(value: bool) -> str:
 
 
 class NotificationSettingsModel(BaseModel):
-    """通知设置模型"""
+    """通知設定模型"""
 
-    NTFY_TOPIC_URL: Optional[str] = None
-    PUSHPLUS_TOKEN: Optional[str] = None
-    PUSHPLUS_TOPIC: Optional[str] = None
-    GOTIFY_URL: Optional[str] = None
-    GOTIFY_TOKEN: Optional[str] = None
-    BARK_URL: Optional[str] = None
-    WX_BOT_URL: Optional[str] = None
-    TELEGRAM_BOT_TOKEN: Optional[str] = None
-    TELEGRAM_CHAT_ID: Optional[str] = None
-    TELEGRAM_API_BASE_URL: Optional[str] = None
     WEBHOOK_URL: Optional[str] = None
     WEBHOOK_METHOD: Optional[str] = None
     WEBHOOK_HEADERS: Optional[str] = None
     WEBHOOK_CONTENT_TYPE: Optional[str] = None
     WEBHOOK_QUERY_PARAMETERS: Optional[str] = None
     WEBHOOK_BODY: Optional[str] = None
-    PCURL_TO_MOBILE: Optional[bool] = None
 
 
 class NotificationTestRequest(BaseModel):
-    """通知测试请求"""
+    """通知測試請求"""
 
     channel: Optional[str] = None
     settings: NotificationSettingsModel = Field(default_factory=NotificationSettingsModel)
 
 
 class AISettingsModel(BaseModel):
-    """AI设置模型"""
+    """AI設定模型"""
 
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_BASE_URL: Optional[str] = None
@@ -138,11 +128,11 @@ async def update_notification_settings(settings: NotificationSettingsModel):
 
     success = env_manager.apply_changes(updates=updates, deletions=deletions)
     if not success:
-        raise HTTPException(status_code=500, detail="更新通知设置失败")
+        raise HTTPException(status_code=500, detail="更新通知設定失敗")
 
     _reload_env()
     return {
-        "message": "通知设置已成功更新",
+        "message": "通知設定已成功更新",
         "configured_channels": build_configured_channels(merged_settings),
     }
 
@@ -163,21 +153,21 @@ async def test_notification_settings(payload: NotificationTestRequest):
         if payload.channel:
             raise HTTPException(
                 status_code=422,
-                detail=f"渠道 {payload.channel} 未配置或不受支持",
+                detail=f"渠道 {payload.channel} 未配置或不受支援",
             )
-        raise HTTPException(status_code=422, detail="请至少配置一个可用的通知渠道")
+        raise HTTPException(status_code=422, detail="請至少配置一個可用的通知渠道")
 
     results = await service.send_test_notification()
     if payload.channel:
         if payload.channel not in results:
             raise HTTPException(
                 status_code=422,
-                detail=f"渠道 {payload.channel} 未配置或不受支持",
+                detail=f"渠道 {payload.channel} 未配置或不受支援",
             )
         results = {payload.channel: results[payload.channel]}
 
     return {
-        "message": "测试通知已执行",
+        "message": "測試通知已執行",
         "results": results,
     }
 
@@ -209,16 +199,16 @@ async def update_rotation_settings(settings: RotationSettingsModel):
             updates[key] = str(value)
     success = env_manager.update_values(updates)
     if not success:
-        raise HTTPException(status_code=500, detail="更新轮换设置失败")
+        raise HTTPException(status_code=500, detail="更新輪換設定失敗")
     _reload_env()
-    return {"message": "轮换设置已成功更新"}
+    return {"message": "輪換設定已成功更新"}
 
 
 @router.get("/status")
 async def get_system_status(
     process_service: ProcessService = Depends(get_process_service),
 ):
-    state_file = "xianyu_state.json"
+    state_file = "shopee_state.json"
     login_state_exists = os.path.exists(state_file)
     env_file_exists = os.path.exists(env_manager.env_file)
     openai_api_key = env_manager.get_value("OPENAI_API_KEY", "")
@@ -280,14 +270,14 @@ async def update_ai_settings(settings: AISettingsModel):
 
     success = env_manager.update_values(updates)
     if not success:
-        raise HTTPException(status_code=500, detail="更新AI设置失败")
+        raise HTTPException(status_code=500, detail="更新AI設定失敗")
     _reload_env()
-    return {"message": "AI设置已成功更新"}
+    return {"message": "AI設定已成功更新"}
 
 
 @router.post("/ai/test")
 async def test_ai_settings(settings: dict):
-    """测试AI模型设置是否有效"""
+    """測試AI模型設定是否有效"""
     try:
         from openai import OpenAI
         import httpx
@@ -339,11 +329,11 @@ async def test_ai_settings(settings: dict):
 
         return {
             "success": True,
-            "message": "AI模型连接测试成功！",
+            "message": "AI模型連線測試成功！",
             "response": extract_ai_response_content(response),
         }
     except Exception as exc:
         return {
             "success": False,
-            "message": f"AI模型连接测试失败: {exc}",
+            "message": f"AI模型連線測試失敗: {exc}",
         }

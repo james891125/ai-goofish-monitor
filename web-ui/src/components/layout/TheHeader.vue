@@ -49,7 +49,7 @@ function goPrompts() {
         <Zap class="w-5 h-5 text-white fill-white" />
       </div>
       <h1 class="text-lg font-black text-slate-800 tracking-tighter">
-        AI <span class="text-primary">Xianyu</span> Hunter
+        AI <span class="text-primary">Shopee</span> Hunter
       </h1>
       <Badge variant="outline" class="ml-2 text-[10px] font-bold border-primary/20 text-primary bg-primary/5 uppercase tracking-widest hidden sm:flex">
         PRO
@@ -114,7 +114,7 @@ function goPrompts() {
            <UserCircle class="w-6 h-6 text-slate-500" />
         </div>
         <div class="text-left hidden lg:block">
-           <p class="text-xs font-black text-slate-700 leading-none mb-0.5">Xianyu Admin</p>
+           <p class="text-xs font-black text-slate-700 leading-none mb-0.5">Shopee Admin</p>
            <p class="text-[10px] text-slate-400 font-medium">{{ t('header.accountManagement') }}</p>
         </div>
       </Button>

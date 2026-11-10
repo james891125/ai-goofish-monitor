@@ -1,5 +1,5 @@
 """
-结果数据的 SQLite 读写服务。
+結果資料的 SQLite 讀寫服務。
 """
 from __future__ import annotations
 
@@ -153,9 +153,9 @@ async def save_result_record(record: dict, keyword: str) -> bool:
 
 def _save_result_record_sync(record: dict, keyword: str) -> bool:
     bootstrap_sqlite_storage()
-    item = record.get("商品信息", {}) or {}
+    item = record.get("商品資訊", {}) or {}
     analysis = record.get("ai_analysis", {}) or {}
-    link = str(item.get("商品链接") or "")
+    link = str(item.get("商品連結") or "")
     link_unique_key = _get_link_unique_key(link) if link else _fallback_unique_key(record, item)
     keyword_hit_count = analysis.get("keyword_hit_count", 0)
     try:
@@ -174,17 +174,17 @@ def _save_result_record_sync(record: dict, keyword: str) -> bool:
             """,
             (
                 build_result_filename(keyword),
-                record.get("搜索关键字", keyword),
-                record.get("任务名称", ""),
-                record.get("爬取时间", ""),
-                item.get("发布时间"),
-                parse_price_value(item.get("当前售价")),
-                item.get("当前售价"),
+                record.get("搜尋關鍵字", keyword),
+                record.get("任務名稱", ""),
+                record.get("爬取時間", ""),
+                item.get("釋出時間"),
+                parse_price_value(item.get("目前售價")),
+                item.get("目前售價"),
                 item.get("商品ID"),
-                item.get("商品标题"),
+                item.get("商品標題"),
                 link,
                 link_unique_key,
-                (record.get("卖家信息", {}) or {}).get("卖家昵称") or item.get("卖家昵称"),
+                (record.get("賣家資訊", {}) or {}).get("賣家暱稱") or item.get("賣家暱稱"),
                 1 if analysis.get("is_recommended") else 0,
                 analysis.get("analysis_source"),
                 keyword_hit_count,
@@ -396,7 +396,7 @@ def _load_result_summary_sync(filename: str) -> dict | None:
         "recommended_items": len(recommended_records),
         "ai_recommended_items": ai_recommended_items,
         "keyword_recommended_items": keyword_recommended_items,
-        "latest_crawl_time": visible_records[0].get("爬取时间"),
+        "latest_crawl_time": visible_records[0].get("爬取時間"),
         "latest_record": visible_records[0],
         "latest_recommendation": recommended_records[0] if recommended_records else None,
     }
@@ -468,7 +468,7 @@ def load_visible_result_item_ids(filename: str) -> set[str]:
         )
     item_ids: set[str] = set()
     for record in visible_records:
-        product = record.get("商品信息", {}) or {}
+        product = record.get("商品資訊", {}) or {}
         item_id = str(product.get("商品ID") or "").strip()
         if item_id:
             item_ids.add(item_id)

@@ -1,5 +1,5 @@
 """
-任务接口响应序列化辅助。
+任務介面響應序列化輔助。
 """
 from __future__ import annotations
 

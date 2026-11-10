@@ -1,6 +1,6 @@
 """
-统一配置管理模块
-使用 Pydantic 进行类型安全的配置管理
+統一配置管理模組
+使用 Pydantic 進行型別安全的配置管理
 """
 try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,7 +12,6 @@ from pydantic import Field
 from typing import Optional
 import os
 
-DEFAULT_TELEGRAM_API_BASE_URL = "https://api.telegram.org"
 
 
 def _env_field(default, env_name: str, **kwargs):
@@ -50,77 +49,55 @@ class AISettings(_EnvSettings):
     skip_analysis: bool = _env_field(False, "SKIP_AI_ANALYSIS")
 
     def is_configured(self) -> bool:
-        """检查AI是否已正确配置"""
+        """檢查AI是否已正確配置"""
         return bool(self.base_url and self.model_name)
 
 
 class NotificationSettings(_EnvSettings):
-    """通知服务配置"""
-    ntfy_topic_url: Optional[str] = _env_field(None, "NTFY_TOPIC_URL")
-    pushplus_token: Optional[str] = _env_field(None, "PUSHPLUS_TOKEN")
-    pushplus_topic: Optional[str] = _env_field(None, "PUSHPLUS_TOPIC")
-    gotify_url: Optional[str] = _env_field(None, "GOTIFY_URL")
-    gotify_token: Optional[str] = _env_field(None, "GOTIFY_TOKEN")
-    bark_url: Optional[str] = _env_field(None, "BARK_URL")
-    wx_bot_url: Optional[str] = _env_field(None, "WX_BOT_URL")
-    telegram_bot_token: Optional[str] = _env_field(None, "TELEGRAM_BOT_TOKEN")
-    telegram_chat_id: Optional[str] = _env_field(None, "TELEGRAM_CHAT_ID")
-    telegram_api_base_url: Optional[str] = _env_field(
-        DEFAULT_TELEGRAM_API_BASE_URL,
-        "TELEGRAM_API_BASE_URL",
-    )
+    """通知服務配置"""
     webhook_url: Optional[str] = _env_field(None, "WEBHOOK_URL")
     webhook_method: str = _env_field("POST", "WEBHOOK_METHOD")
     webhook_headers: Optional[str] = _env_field(None, "WEBHOOK_HEADERS")
     webhook_content_type: str = _env_field("JSON", "WEBHOOK_CONTENT_TYPE")
     webhook_query_parameters: Optional[str] = _env_field(None, "WEBHOOK_QUERY_PARAMETERS")
     webhook_body: Optional[str] = _env_field(None, "WEBHOOK_BODY")
-    pcurl_to_mobile: bool = _env_field(True, "PCURL_TO_MOBILE")
 
     def has_any_notification_enabled(self) -> bool:
-        """检查是否配置了任何通知服务"""
-        return any([
-            self.ntfy_topic_url,
-            self.pushplus_token,
-            self.wx_bot_url,
-            self.gotify_url and self.gotify_token,
-            self.bark_url,
-            self.telegram_bot_token and self.telegram_chat_id,
-            self.webhook_url
-        ])
+        """檢查是否配置了任何通知服務"""
+        return bool(self.webhook_url)
 
 
 class ScraperSettings(_EnvSettings):
-    """爬虫相关配置"""
+    """爬蟲相關配置"""
     run_headless: bool = _env_field(True, "RUN_HEADLESS")
     login_is_edge: bool = _env_field(False, "LOGIN_IS_EDGE")
     running_in_docker: bool = _env_field(False, "RUNNING_IN_DOCKER")
-    state_file: str = _env_field("xianyu_state.json", "STATE_FILE")
+    state_file: str = _env_field("shopee_state.json", "STATE_FILE")
 
 
 class AppSettings(_EnvSettings):
-    """应用主配置"""
+    """應用主配置"""
     server_port: int = _env_field(8000, "SERVER_PORT")
     web_username: str = _env_field("admin", "WEB_USERNAME")
     web_password: str = _env_field("admin123", "WEB_PASSWORD")
     task_log_retention_days: int = _env_field(7, "TASK_LOG_RETENTION_DAYS", ge=1)
 
-    # 文件路径配置
+    # 檔案路徑配置
     config_file: str = "config.json"
     image_save_dir: str = "images"
     task_image_dir_prefix: str = "task_images_"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # 创建必要的目录
+        # 建立必要的目錄
         os.makedirs(self.image_save_dir, exist_ok=True)
 
 
-# 全局配置实例（单例模式）
+# 全域配置實例（單例模式）
 _settings_instance = None
 
 def get_settings() -> AppSettings:
-    """获取全局配置实例"""
+    """獲取全域配置實例"""
     global _settings_instance
     if _settings_instance is None:
         _settings_instance = AppSettings()
@@ -128,7 +105,7 @@ def get_settings() -> AppSettings:
 
 
 def reload_settings() -> None:
-    """重新加载全局配置实例"""
+    """重新載入全域配置實例"""
     global _settings_instance, settings, ai_settings, notification_settings, scraper_settings
     from dotenv import load_dotenv
     from src.infrastructure.config.env_manager import env_manager
@@ -141,7 +118,7 @@ def reload_settings() -> None:
     scraper_settings = ScraperSettings()
 
 
-# 导出便捷访问的配置实例
+# 匯出便捷訪問的配置實例
 settings = get_settings()
 ai_settings = AISettings()
 notification_settings = NotificationSettings()

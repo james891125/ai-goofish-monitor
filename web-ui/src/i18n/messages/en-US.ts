@@ -2,7 +2,7 @@ import enUSExtra from '@/i18n/messages/en-US-extra'
 
 const enUS = {
   app: {
-    name: 'Goofish Monitor',
+    name: 'Shopee Monitor',
   },
   locale: {
     switchLabel: 'Switch language',
@@ -183,7 +183,7 @@ const enUS = {
       currentMin: 'Current Lowest',
       sampleCount: '{count} samples',
       uniqueItems: '{count} unique items',
-      highestPrice: 'High ¥{price}',
+      highestPrice: 'High NT${price}',
       noRange: 'No range yet',
       noSnapshot: 'No market snapshot yet',
       latestSnapshot: 'Updated at {time}',
@@ -249,6 +249,9 @@ const enUS = {
       keyConfigured: 'Configured and intentionally not echoed back.',
       keyMissing: 'Not configured and intentionally not echoed back.',
       modelName: 'Model Name',
+      provider: 'AI Provider',
+      providerHint: 'Click to fill in the API base URL and a suggested vision-capable model, or type any OpenAI-compatible endpoint manually.',
+      getKey: 'Get a {provider} API key',
       proxy: 'Proxy URL (optional)',
       loading: 'Loading AI settings...',
       testConnection: 'Test Connection',

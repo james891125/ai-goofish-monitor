@@ -70,7 +70,7 @@ def test_cli_runs_keyword_mode_without_prompt_files(tmp_path, load_json_fixture,
     config_data = load_json_fixture("config.sample.json")
     config_data[0]["enabled"] = True
     config_data[0]["decision_mode"] = "keyword"
-    config_data[0]["keyword_rules"] = ["a7m4", "验货宝"]
+    config_data[0]["keyword_rules"] = ["a7m4", "驗貨寶"]
     config_data[0]["ai_prompt_base_file"] = "missing_base.txt"
     config_data[0]["ai_prompt_criteria_file"] = "missing_criteria.txt"
 

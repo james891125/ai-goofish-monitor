@@ -10,14 +10,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     RUNNING_IN_DOCKER=true \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
-    TZ=Asia/Shanghai
+    TZ=Asia/Taipei
 
 COPY requirements-runtime.txt /tmp/requirements-runtime.txt
 
 RUN python3 -m venv "$VIRTUAL_ENV"
 
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r /tmp/requirements-runtime.txt
+    pip install -r /tmp/requirements-runtime.txt
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

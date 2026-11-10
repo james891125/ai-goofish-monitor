@@ -3,6 +3,13 @@ import { http } from '@/lib/http'
 export interface AccountItem {
   name: string
   path: string
+  cookie_count?: number
+  logged_in?: boolean
+  shopee_user_id?: string
+  expires_at?: string | null
+  expired?: boolean
+  updated_at?: string
+  invalid?: boolean
 }
 
 export interface AccountDetail extends AccountItem {
@@ -17,7 +24,7 @@ export async function getAccount(name: string): Promise<AccountDetail> {
   return await http(`/api/accounts/${encodeURIComponent(name)}`)
 }
 
-export async function createAccount(payload: { name: string; content: string }): Promise<AccountDetail> {
+export async function createAccount(payload: { name?: string; content: string; overwrite?: boolean }): Promise<AccountItem & { message: string }> {
   return await http('/api/accounts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
