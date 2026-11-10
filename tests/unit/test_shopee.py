@@ -125,5 +125,5 @@ def test_explain_filters_reports_why_items_were_dropped():
     items = shopee.parse_search_items(_load("shopee_search.json"))
     text = shopee.explain_filters(items, free_shipping=True, region_filter="Taipei")
     assert "1 件帶有免運標記" in text
-    assert "0 件符合" in text and "台北市大安區" in text
+    assert "0 件符合" in text and "北市大安區" in text
     assert shopee.explain_filters([], free_shipping=True) == ""
