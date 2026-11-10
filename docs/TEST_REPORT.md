@@ -11,10 +11,10 @@
 | `.venv/bin/python -m pytest -q` | **179 passed** | 僅計新蝦皮流程及仍適用的保留測試，不含已移除的舊平台測試 |
 | `cd web-ui` 後 `npm test` | **7 passed** | 前端純邏輯測試，不等於瀏覽器互動驗證 |
 | `cd web-ui` 後 `npm run build` | **通過** | `vue-tsc -b` 與 Vite 正式建置成功，輸出至根目錄 `dist/` |
-| Chrome 瀏覽器操作 | **Windows 通過** | 真實 Chrome 執行登入、建立／修改／刪除、取消／Escape、商品／歷史、匯入、設定／Prompt、返回、手機版與登出／再登入。測試使用隔離資料；首次測試需關閉隱含 .env 搜尋，本次已修正為明確本目錄路徑 |
+| Chrome 瀏覽器操作 | **Windows 通過** | 真實 Chrome 執行登入、建立／修改／刪除、取消／Escape、商品／歷史、匯入、設定／Prompt、返回、手機版與登出／再登入。最終937d190原碼直接通過，未使用 PYTHON_DOTENV_DISABLED；測試使用隔離資料 |
 | Windows 11 ZIP 啟動 | **通過** | PowerShell 5.1、PATH Python 3.14.7、Node 24.13.0：建立 venv、安裝、前端建置、Uvicorn 啟動、健康檢查成功；-CheckOnly 於 PS5.1 與 PS7 通過 |
 | Docker 建置／執行 | **GitHub CI 通過** | 初版 CI 已建置並通過容器健康與登入保護檢查；本機沒有 Docker。Compose 磁碟區還原尚未驗證 |
-| GitHub Actions | **修正後重跑中** | 初版 Linux／Docker 通過；Windows 5 項失敗已定位並修正，詳見下方。未以警告誤當根因 |
+| GitHub Actions | **三個作業全部通過** | `937d190` 的 Linux、Windows、Docker 均成功。Windows CI：173 passed、6 skipped；見下方可核對連結 |
 
 依實際 npm audit 修補既有版本範圍內的依賴，未使用 --force 或主要版本升級。重新 npm ci、npm audit、前端測試及建置全部通過；audit 由 12 項（9 高、3 中）降為 0。這不代表所有未知風險均不存在。
 
@@ -54,9 +54,9 @@ SQLite 備份測試包含尚未 checkpoint 的已提交 WAL 資料、完整性�
 | 排程、重複執行、來源授權失效／429／逾時／連線錯誤 | 來源與工作 runtime 的自動化；不代表已驗證長期正式來源穩定性 |
 | Windows／Docker／Vue | 啟動與操作結果須分別記錄，不能由其他平台測試推定 |
 
-## 尚未驗證／外部阻礙
+## 驗證限制與外部阻礙
 
-- Windows 完整回歸：等待修正後 CI 與最新快照重跑；ZIP 啟動、HTTP 操作及 Chrome 操作已通過。
+- Windows 本機完整回歸：`937d190` 已取得 172 passed、7 skipped、0 failed；6 項 POSIX Bash 測試與1項 Windows 未允許建立測試 symlink 的個案略過。
 - 雲端 Chromium 因 socket 系統限制無法啟動，已改在 Windows 的真實 Chrome 完成操作驗證。
 - Docker 本機／Compose 磁碟區還原：未驗證。本次 GitHub CI 映像建置與容器測試通過不代表已驗證實機 Compose 還原。
 - 正式蝦皮搜尋、OAuth／Access Token、配額與服務條款：等待合法資料來源與授權。
@@ -72,3 +72,15 @@ SQLite 備份測試包含尚未 checkpoint 的已提交 WAL 資料、完整性�
 初次結果為 168 passed、5 failed、6 skipped。真正問題是 SQLite 備份使用連線 context manager 卻未 close，失敗清理在 Windows 遭檔案鎖阻擋；已改用 contextlib.closing。另兩項讀檔測試未指定 UTF-8、兩項代理測試假設環境變數名稱區分大小寫，已依跨平台語意修正。Node 20 淘汰提醒不是失敗原因。
 
 Windows 本機 HTTP 實測：Cookie 登入、任務 CRUD、兩次執行去重、NT$20,000 模擬歷史、授權確認匯入、NT$17,000→16,000 價格歷史、刪除保留歷史、舊路由 404、登出後 API 401 均通過。
+
+## 已核對的遠端 CI 與最終 Windows 快照
+
+- 測試 commit：`937d190c22369cd3cb9cc929c34d69b94a5c7b11`，Git tree：`d9971f20480e1cba940b852ac4c75610fe1271c7`。
+- [GitHub Actions：Linux、Windows、Docker 全部成功](https://github.com/james891125/ai-goofish-monitor/actions/runs/42738275004)。Windows CI Python 173 passed、6 skipped，前端測試與建置通過，npm ci 回報 0 vulnerabilities。
+- Windows 實機從固定 commit ZIP 重新解壓縮，逐位元組核對全部107檔並重建相同 Git tree；未覆寫舊測試資料。PowerShell5.1 完整安裝、建置、啟動再度通過，Python 172 passed、7 skipped、0 failed。
+- Windows 使用 Python3.14.7、Node24.13.0；GitHub CI 使用 Python3.12。略過項目是平台限定檢查，不是功能失敗。
+- 最終 Windows Chrome 操作亦以未改動的 `937d190` 原碼與更新後套件重跑通過，未設定 `PYTHON_DOTENV_DISABLED`；PS5.1／PS7 檢查、實際登入／登出、前端7項與 npm audit 0 均再次確認。
+
+## 瀏覽器下載的來源標記差異
+
+Windows自動實測使用 Invoke-WebRequest 下載ZIP，可能不產生瀏覽器下載常見的MOTW。使用者後續以瀏覽器下載時遇到RemoteSigned未簽章錯誤，這項下載來源差異先前未覆蓋。README現已補上有效政策檢查、固定版腳本SHA256核對與使用者自行信任單一檔案的說明；程式沒有變更執行政策或自動解除封鎖。AllSigned／Restricted或組織強制政策仍須遵守。

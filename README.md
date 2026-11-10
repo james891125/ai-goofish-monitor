@@ -52,7 +52,36 @@ notepad .env
 .\start.ps1 -CheckOnly
 ```
 
-若 PowerShell 的執行原則阻擋腳本，請依電腦或組織的安全政策處理；本腳本不會修改執行原則、關閉防護或要求管理員權限。可改用下列不需執行 `.ps1` 的手動步驟：
+### 瀏覽器下載後出現「未數位簽署」
+
+瀏覽器下載的 ZIP 可能帶有網際網路來源標記（MOTW），解壓縮後的 `start.ps1` 因此被 `RemoteSigned` 阻擋。這與應用程式錯誤不同；我們的實機 ZIP 測試使用 `Invoke-WebRequest` 下載，該路徑未必附上此標記。
+
+先檢查有效政策與來源，不要改成全域 Bypass：
+
+```powershell
+Get-ExecutionPolicy
+Get-ExecutionPolicy -List
+Get-FileHash .\start.ps1 -Algorithm SHA256
+```
+
+固定已驗證版本 `937d190` 的 `start.ps1` SHA256：
+
+```text
+603499DC59E94A91E46D68312A5671C43D616C4F194A8E525DEDBC4D29E40432
+```
+
+只有在有效政策為 `RemoteSigned`、雜湊一致、確認檔案來源與內容可信且組織允許時，才由使用者自行解除這**一個檔案**的來源封鎖，再啟動：
+
+```powershell
+Unblock-File -LiteralPath .\start.ps1
+.\start.ps1
+```
+
+這不會變更執行政策。不要遞迴解封整個資料夾。若雜湊不同，請停止並確認下載版本。若有效政策是 `AllSigned`／`Restricted` 或由 `MachinePolicy`／`UserPolicy` 強制簽章，請遵守管理政策，向管理員取得簽署或允許；不要改全域政策或繞過限制。
+
+Microsoft 說明：[解除單一腳本封鎖而不改執行政策](https://learn.microsoft.com/powershell/module/microsoft.powershell.security/set-executionpolicy?view=powershell-5.1#example-7-unblock-a-script-to-run-it-without-changing-the-execution-policy)。本專案不會自動修改執行原則、解除封鎖或要求管理員權限。
+
+若電腦政策允許手動啟動 Python 應用，可使用下列步驟；不得用來違反組織的程式執行限制：
 
 ```powershell
 python -m venv .venv
