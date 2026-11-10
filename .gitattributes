@@ -1,0 +1,3 @@
+# Preserve Windows script bytes in downloaded ZIPs while showing textual diffs.
+*.ps1 -text diff whitespace=cr-at-eol
+*.cmd -text diff whitespace=cr-at-eol

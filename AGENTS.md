@@ -19,7 +19,7 @@
 
 ## 啟動與測試
 
-- Windows：複製 `.env.example` 為 `.env`，設定自訂登入帳密後執行 `.\start.ps1`。
+- Windows：雙擊 `啟動蝦皮監控.cmd`，依提示設定自訂帳密；進階使用者仍可執行 `.\start.ps1`。
 - Linux／macOS：`bash start.sh`。
 - 啟動腳本只綁定 localhost。禁止預設密碼、禁止將機密印入日誌。
 - Python 測試：`.venv/bin/python -m pytest -m "not live"`，Windows 對應 `.\.venv\Scripts\python.exe`。

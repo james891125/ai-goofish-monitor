@@ -101,10 +101,12 @@ def test_windows_launcher_uses_venv_without_policy_changes():
     raw = (ROOT / 'start.ps1').read_bytes()
     assert raw.startswith(b'\xef\xbb\xbf')  # Windows PowerShell 5.1 understands the Chinese text.
     script = raw.decode('utf-8-sig')
-    assert 'param([switch]$CheckOnly)' in script
+    assert 'param([switch]$CheckOnly, [switch]$DoubleClick, [switch]$CollectBrowser)' in script
     assert '.venv\\Scripts\\python.exe' in script
     assert 'npm.cmd' in script
-    assert '--host 127.0.0.1' in script
+    assert 'scripts\\windows_launch.py' in script
+    helper = (ROOT / 'scripts/windows_launch.py').read_text(encoding='utf-8')
+    assert '"--host", "127.0.0.1"' in helper
     assert 'Set-ExecutionPolicy' not in script
     assert 'Bypass' not in script
 

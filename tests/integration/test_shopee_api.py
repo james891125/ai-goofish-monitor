@@ -27,6 +27,7 @@ def payload(**updates):
 
 def test_api_auth_csrf_and_logout(client):
     assert client.get('/health').status_code==200
+    assert client.get('/health').json()['application']=='shopee_tw_monitor'
     assert client.get('/api/shopee/settings').status_code==401
     assert client.post('/auth/status',json={'username':'test-user','password':'wrong'}).status_code==401
     login(client)

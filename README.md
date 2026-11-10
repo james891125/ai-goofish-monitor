@@ -24,7 +24,7 @@
 
 ## Windows 11 啟動
 
-需求：Python 3.11 以上、Node.js 22.12 以上（含 npm）。使用 ZIP 測試不需要 Git，也不需要 Docker。首次安裝需要連線至官方套件來源。使用 PowerShell 5.1 或 7，以下命令在本專案根目錄執行。
+需求：Python 3.11 以上、Node.js 22.12 以上（含 npm）。使用 ZIP 測試不需要 Git，也不需要 Docker。首次安裝需要連線至官方套件來源。雙擊入口使用 Windows PowerShell 5.1；進階使用者仍可在根目錄手動執行。
 
 ### 從 GitHub 分支下載 ZIP
 
@@ -32,10 +32,21 @@
 2. 用左上方分支選單選擇 `feature/shopee-tw-migration`，確認不是 `master`。
 3. 選擇 **Code → Download ZIP**。
 4. 下載後按右鍵選擇 **全部解壓縮**，例如解壓縮到 `C:\Users\你的名稱\Downloads\shopee-tw-monitor`。不要在壓縮檔預覽視窗內直接執行。
-5. 開啟解壓縮後包含 `start.ps1`、`.env.example`、`web-ui` 的資料夾。在檔案總管位址列輸入 `powershell` 或從右鍵選單開啟終端機。
-6. 依下列步驟建立設定並啟動。第一次啟動會下載套件，請保留終端機直到看到本機網址。
+5. 開啟解壓縮後包含 `start.ps1`、`.env.example`、`web-ui` 的資料夾，雙擊 **`啟動蝦皮監控.cmd`**，不必記 PowerShell 命令。
+6. 按畫面提示完成首次設定。第一次啟動會安裝套件與建置介面；就緒後自動開啟本機管理頁，請保留服務視窗。
 
 ZIP 不包含使用者帳密、API Key、資料庫或已安裝的依賴。再次下載新版 ZIP 時，先備份舊資料夾的 `.env`、`data` 與自訂 Prompt，不要直接刪除舊資料夾。
+
+### 雙擊啟動（建議）
+
+- 一般使用：雙擊 **`啟動蝦皮監控.cmd`**。第一次仍需設定自己的登入帳密及 AI 端點／模型／Key；已有 `.env` 與資料不會被覆寫。
+- 已在準備或執行時，不會再開第二份服務或重複安裝。相同程式已就緒會開既有管理頁；其他程式占用連接埠則停止，不殺程序、不擅自換埠。
+- 升級請先停止舊服務視窗，再啟動新資料夾。同一連接埠上可辨識的既有服務可能是另一資料夾的版本，開啟它不代表新版已啟動。
+- 視窗保留啟動與錯誤訊息；按 Ctrl+C 停止本次服務。不要直接刪除使用中的資料夾。
+- 實驗收集：雙擊 **`實驗瀏覽收集.cmd`**，選擇先前下載的收集設定 JSON。仍需本人確認風險與登入蝦皮，不會連接日常 Chrome Cookie 或自動登入。
+- 如果 Windows 或 PowerShell 阻擋，先停下並依 [雙擊與安全設定說明](docs/WINDOWS_DOUBLE_CLICK.md) 確認來源與適用政策。啟動器不會變更執行政策、繞過群組原則／安全警示，或在 PowerShell 被拒後改走 Python。
+
+### 手動命令方式（選用）
 
 ```powershell
 Copy-Item .env.example .env
@@ -68,10 +79,10 @@ Get-ExecutionPolicy -List
 Get-FileHash .\start.ps1 -Algorithm SHA256
 ```
 
-固定已驗證版本 `937d190` 的 `start.ps1` SHA256：
+本次雙擊啟動版 `start.ps1` 的 SHA256（只適用於此份原始碼）：
 
 ```text
-603499DC59E94A91E46D68312A5671C43D616C4F194A8E525DEDBC4D29E40432
+C1C4C578E01CB03337C302304DB4D80FA76AA067201B798B0D0FFD32C3F20A85
 ```
 
 只有在有效政策為 `RemoteSigned`、雜湊一致、確認檔案來源與內容可信且組織允許時，才由使用者自行解除這**一個檔案**的來源封鎖，再啟動：
@@ -85,20 +96,7 @@ Unblock-File -LiteralPath .\start.ps1
 
 Microsoft 說明：[解除單一腳本封鎖而不改執行政策](https://learn.microsoft.com/powershell/module/microsoft.powershell.security/set-executionpolicy?view=powershell-5.1#example-7-unblock-a-script-to-run-it-without-changing-the-execution-policy)。本專案不會自動修改執行原則、解除封鎖或要求管理員權限。
 
-若電腦政策允許手動啟動 Python 應用，可使用下列步驟；不得用來違反組織的程式執行限制：
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-runtime.txt
-.\.venv\Scripts\python.exe scripts/check_config.py
-Push-Location web-ui
-npm.cmd ci
-npm.cmd run build
-Pop-Location
-.\.venv\Scripts\python.exe -m uvicorn src.app:app --host 127.0.0.1 --port 8000 --env-file .env
-```
-
-手動啟動命令的 `--port` 應與你選定的連接埠一致。不要同時啟動多個後端程序或使用 `--workers`；目前工作階段與排程是單一程序設計。
+不要同時啟動多個後端程序或使用 `--workers`；目前工作階段與排程是單一程序設計。
 
 Linux／macOS 提供相同流程：
 

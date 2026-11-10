@@ -116,7 +116,7 @@ async def logout(request: Request):
 
 @app.get('/health')
 async def health():
-    return {'status':'healthy','release_status':'waiting_authorization'}
+    return {'status':'healthy','release_status':'waiting_authorization','application':'shopee_tw_monitor'}
 
 
 if Path('dist/assets').is_dir(): app.mount('/assets',StaticFiles(directory='dist/assets'),name='assets')
