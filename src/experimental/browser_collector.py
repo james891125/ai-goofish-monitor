@@ -479,9 +479,6 @@ def collector_lock(path: Path | None = None) -> Iterator[None]:
         if hasattr(os, "getuid") and info.st_uid != os.getuid():
             raise CollectionStopped(StopCode.LOCK_UNAVAILABLE)
         os.lseek(fd, 0, os.SEEK_SET)
-        if os.read(fd, 1) != b"\0":
-            raise CollectionStopped(StopCode.LOCK_UNAVAILABLE)
-        os.lseek(fd, 0, os.SEEK_SET)
         try:
             if os.name == "nt":
                 import msvcrt
@@ -491,8 +488,14 @@ def collector_lock(path: Path | None = None) -> Iterator[None]:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             locked = True
         except OSError as exc:
-            code = StopCode.ALREADY_RUNNING if exc.errno in {errno.EACCES, errno.EAGAIN, errno.EDEADLK} else StopCode.LOCK_UNAVAILABLE
+            contended = exc.errno in {errno.EACCES, errno.EAGAIN, errno.EDEADLK} or getattr(exc, "winerror", None) in {32, 33}
+            code = StopCode.ALREADY_RUNNING if contended else StopCode.LOCK_UNAVAILABLE
             raise CollectionStopped(code) from None
+        # Windows byte-range locks are mandatory: reading a byte held by a
+        # different process fails before we can classify lock contention.
+        # Acquire first, then verify the marker without modifying its data.
+        if os.read(fd, 1) != b"\0":
+            raise CollectionStopped(StopCode.LOCK_UNAVAILABLE)
     except OSError:
         raise CollectionStopped(StopCode.LOCK_UNAVAILABLE) from None
     else:

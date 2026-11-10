@@ -414,25 +414,25 @@ def test_cli_risk_declined_never_launches(tmp_path):
     code = run_cli(["--request", str(request), "--output", str(output)], input_fn=lambda _: "no",
                    print_fn=lambda _: None, session_factory=session)
     assert code != 0 and not session.entered
-    assert json.loads(output.read_text())["result"]["code"] == "risk_declined"
+    assert json.loads(output.read_text(encoding="utf-8"))["result"]["code"] == "risk_declined"
 
 
 def test_cli_invalid_input_does_not_launch_or_echo_request(tmp_path):
     request = tmp_path / "bad.json"
-    request.write_text('{"cookie":"secret"}')
+    request.write_text('{"cookie":"secret"}', encoding="utf-8")
     logs = []
     session = FakeSession(FakePage())
     output = tmp_path / "result.json"
     code = run_cli(["--request", str(request), "--output", str(output)], print_fn=logs.append, session_factory=session)
     assert code != 0 and not session.entered
-    assert "secret" not in "".join(logs) + output.read_text()
+    assert "secret" not in "".join(logs) + output.read_text(encoding="utf-8")
 
 
 def test_output_preserves_partial_and_no_browser_artifacts(tmp_path):
     result = CollectionResult(products=[product_from_snapshot(snapshot(), P1)], code=StopCode.HTTP_BLOCKED)
     path = tmp_path / "result.json"
     write_result(path, result)
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     assert len(data["products"]) == 1 and data["result"]["code"] == "http_blocked"
     assert set(tmp_path.iterdir()) == {path}
     assert not {"cookies", "html", "screenshot", "storage_state"}.intersection(data)
@@ -498,7 +498,7 @@ def dom_snapshot(fixture):
     if not shutil.which("node"):
         pytest.skip("Node is optional for offline JavaScript DOM fixture tests")
     script = DOM_HARNESS.replace("SCRIPT_PLACEHOLDER", json.dumps(VISIBLE_SNAPSHOT_JS))
-    completed = subprocess.run(["node", "-e", script, json.dumps(fixture)], capture_output=True, text=True, check=True)
+    completed = subprocess.run(["node", "-e", script, json.dumps(fixture)], capture_output=True, text=True, encoding="utf-8", check=True)
     return json.loads(completed.stdout)
 
 
@@ -533,40 +533,40 @@ def test_actual_dom_maximum_five_visible_links():
 
 def test_existing_output_is_unchanged_before_risk_prompt_or_browser(tmp_path):
     request = tmp_path / "request.json"
-    request.write_text(json.dumps({"urls": [P1]}))
+    request.write_text(json.dumps({"urls": [P1]}), encoding="utf-8")
     output = tmp_path / "result.json"
-    output.write_text("previous important result")
+    output.write_text("previous important result", encoding="utf-8")
     session = FakeSession(FakePage())
     def must_not_prompt(_):
         pytest.fail("Must refuse existing output before asking or opening browser")
     code = run_cli(["--request", str(request), "--output", str(output)], input_fn=must_not_prompt,
                    print_fn=lambda _: None, session_factory=session)
     assert code != 0 and not session.entered
-    assert output.read_text() == "previous important result"
+    assert output.read_text(encoding="utf-8") == "previous important result"
 
 
 def test_request_file_cannot_be_overwritten_as_output(tmp_path):
     request = tmp_path / "request.json"
     original = json.dumps({"urls": [P1]})
-    request.write_text(original)
+    request.write_text(original, encoding="utf-8")
     session = FakeSession(FakePage())
     code = run_cli(["--request", str(request), "--output", str(request), "--risk-acknowledged"],
                    print_fn=lambda _: None, session_factory=session)
-    assert code != 0 and not session.entered and request.read_text() == original
+    assert code != 0 and not session.entered and request.read_text(encoding="utf-8") == original
 
 
 def test_output_race_never_overwrites_and_removes_temporary_file(tmp_path):
     output = tmp_path / "result.json"
-    output.write_text("another writer")
+    output.write_text("another writer", encoding="utf-8")
     with pytest.raises(FileExistsError):
         write_result(output, CollectionResult())
-    assert output.read_text() == "another writer"
+    assert output.read_text(encoding="utf-8") == "another writer"
     assert list(tmp_path.iterdir()) == [output]
 
 
 def test_dangling_output_symlink_is_refused_before_launch(tmp_path):
     request = tmp_path / "request.json"
-    request.write_text(json.dumps({"urls": [P1]}))
+    request.write_text(json.dumps({"urls": [P1]}), encoding="utf-8")
     output = tmp_path / "result.json"
     try:
         output.symlink_to(tmp_path / "missing")
@@ -685,7 +685,7 @@ def test_cli_windows_defaults_to_edge_and_still_prompts_for_risk(tmp_path, monke
     from src.experimental import browser_collector
     monkeypatch.setattr(browser_collector.sys, "platform", "win32")
     request = tmp_path / "request.json"
-    request.write_text(json.dumps({"urls": [P1]}))
+    request.write_text(json.dumps({"urls": [P1]}), encoding="utf-8")
     session = FakeSession(FakePage({P1: snapshot()}))
     prompts = []
     def confirm(prompt):
@@ -753,12 +753,12 @@ def test_os_lock_released_after_cancellation_or_failure(tmp_path, failure):
 def test_os_lock_never_overwrites_arbitrary_existing_file(tmp_path):
     from src.experimental.browser_collector import collector_lock
     lock_path = tmp_path / "collector.lock"
-    lock_path.write_text("Important existing file")
+    lock_path.write_text("Important existing file", encoding="utf-8")
     with pytest.raises(CollectionStopped) as error:
         with collector_lock(lock_path):
             pytest.fail("Must not acquire malformed existing file")
     assert error.value.code == StopCode.LOCK_UNAVAILABLE
-    assert lock_path.read_text() == "Important existing file"
+    assert lock_path.read_text(encoding="utf-8") == "Important existing file"
 
 
 def test_os_lock_refuses_symlink_without_altering_target(tmp_path):
@@ -789,10 +789,10 @@ def test_os_lock_is_cross_process_and_survives_clean_exit(tmp_path):
         "\nexcept CollectionStopped as exc: print(exc.code.value)"
     )
     with collector_lock(lock_path):
-        contender = subprocess.run([sys.executable, "-c", script, str(lock_path)], text=True,
+        contender = subprocess.run([sys.executable, "-c", script, str(lock_path)], text=True, encoding="utf-8",
                                    capture_output=True, check=True)
         assert contender.stdout.strip() == "already_running"
-    successor = subprocess.run([sys.executable, "-c", script, str(lock_path)], text=True,
+    successor = subprocess.run([sys.executable, "-c", script, str(lock_path)], text=True, encoding="utf-8",
                                capture_output=True, check=True)
     assert successor.stdout.strip() == "acquired"
 
@@ -1023,3 +1023,103 @@ def test_manual_direct_challenge_route_is_aborted():
     route = FakeRoute(page.request("https://shopee.tw/verify/captcha"))
     guard.route(route)
     assert route.aborted and guard.stop_code == StopCode.VERIFICATION_REQUIRED
+
+
+def test_windows_mandatory_lock_is_acquired_before_marker_read(tmp_path, monkeypatch):
+    import errno
+    import os
+    import sys
+    from src.experimental import browser_collector
+
+    lock_path = tmp_path / "windows-collector.lock"
+    real_read = os.read
+    held = {"fd": None, "reads": 0}
+
+    def read_only_owned_byte(fd, count):
+        # Model Windows mandatory locking, even when this test runs on POSIX.
+        if held["fd"] != fd:
+            raise PermissionError(errno.EACCES, "byte is not locked by this handle")
+        held["reads"] += 1
+        return real_read(fd, count)
+
+    def windows_locking(fd, mode, count):
+        assert count == 1
+        if mode == 1:
+            if held["fd"] is not None:
+                raise PermissionError(errno.EACCES, "byte already held")
+            held["fd"] = fd
+        else:
+            assert mode == 2 and held["fd"] == fd
+            held["fd"] = None
+
+    local_os = SimpleNamespace(**{name: getattr(os, name) for name in dir(os)})
+    local_os.name = "nt"
+    local_os.read = read_only_owned_byte
+    monkeypatch.setattr(browser_collector, "os", local_os)
+    monkeypatch.setitem(sys.modules, "msvcrt", SimpleNamespace(locking=windows_locking, LK_NBLCK=1, LK_UNLCK=2))
+
+    with browser_collector.collector_lock(lock_path):
+        assert held["reads"] == 1
+        with pytest.raises(CollectionStopped) as error:
+            with browser_collector.collector_lock(lock_path):
+                pytest.fail("A second process must not acquire the byte")
+        assert error.value.code == StopCode.ALREADY_RUNNING
+        assert held["reads"] == 1
+    assert held["fd"] is None
+    assert lock_path.read_bytes() == b"\0"
+    with browser_collector.collector_lock(lock_path):
+        assert held["reads"] == 2
+    assert held["fd"] is None
+
+
+def test_windows_bad_marker_is_not_modified_and_releases_acquired_lock(tmp_path, monkeypatch):
+    import os
+    import sys
+    from src.experimental import browser_collector
+
+    lock_path = tmp_path / "windows-collector.lock"
+    lock_path.write_bytes(b"x")
+    events = []
+    local_os = SimpleNamespace(**{name: getattr(os, name) for name in dir(os)})
+    local_os.name = "nt"
+    monkeypatch.setattr(browser_collector, "os", local_os)
+    monkeypatch.setitem(sys.modules, "msvcrt", SimpleNamespace(
+        locking=lambda fd, mode, count: events.append(mode), LK_NBLCK=1, LK_UNLCK=2,
+    ))
+    with pytest.raises(CollectionStopped) as error:
+        with browser_collector.collector_lock(lock_path):
+            pytest.fail("An invalid marker must be rejected")
+    assert error.value.code == StopCode.LOCK_UNAVAILABLE
+    assert events == [1, 2]
+    assert lock_path.read_bytes() == b"x"
+
+
+def test_lock_open_permission_error_is_not_misclassified_as_contention(tmp_path, monkeypatch):
+    import errno
+    import os
+    from src.experimental import browser_collector
+
+    def denied_open(*args, **kwargs):
+        raise PermissionError(errno.EACCES, "cannot open lock file")
+
+    local_os = SimpleNamespace(**{name: getattr(os, name) for name in dir(os)})
+    local_os.open = denied_open
+    monkeypatch.setattr(browser_collector, "os", local_os)
+    with pytest.raises(CollectionStopped) as error:
+        with browser_collector.collector_lock(tmp_path / "denied.lock"):
+            pytest.fail("A file permission failure must not acquire a lock")
+    assert error.value.code == StopCode.LOCK_UNAVAILABLE
+
+
+def test_collector_tests_specify_text_encoding_for_files_and_subprocesses():
+    import ast
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        keywords = {keyword.arg for keyword in node.keywords}
+        if node.func.attr in {"read_text", "write_text"}:
+            assert "encoding" in keywords, f"Missing file encoding at line {node.lineno}"
+        if (node.func.attr == "run" and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "subprocess" and "text" in keywords):
+            assert "encoding" in keywords, f"Missing subprocess encoding at line {node.lineno}"

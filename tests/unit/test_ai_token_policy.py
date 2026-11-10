@@ -104,15 +104,24 @@ def test_inference_setting_changes_invalidate_cache(context, change):
     assert len(state.calls) == 2
 
 
-def test_base_system_prompt_change_invalidates_cache(context, monkeypatch):
+@pytest.mark.parametrize('newline', ['\n', '\r\n'], ids=['lf', 'crlf'])
+def test_base_system_prompt_change_invalidates_cache(context, monkeypatch, tmp_path, newline):
     _, task, _, state, monitor = context
-    run(monitor, task)
-    original = Path.read_text
-    def changed(path, *args, **kwargs):
-        content = original(path, *args, **kwargs)
-        return content + '\n請確認配件完整度。' if str(path) == 'prompts/base_prompt.txt' else content
-    monkeypatch.setattr(Path, 'read_text', changed)
-    assert run(monitor, task)['ai_new_count'] == 1 and len(state.calls) == 2
+    original = Path('prompts/base_prompt.txt').read_text(encoding='utf-8')
+    prompt_file = tmp_path / 'prompts' / 'base_prompt.txt'
+    prompt_file.parent.mkdir()
+    prompt_file.write_text(original, encoding='utf-8', newline=newline)
+    monkeypatch.chdir(tmp_path)
+    assert run(monitor, task)['ai_new_count'] == 1
+
+    # Edit a real UTF-8 file. String comparisons of native path separators do
+    # not work across Windows and POSIX, and must not decide whether it changes.
+    addition = '請確認配件完整度。'
+    prompt_file.write_text(original + '\n' + addition, encoding='utf-8', newline=newline)
+    result = run(monitor, task)
+    assert result['ai_new_count'] == 1 and result['ai_reused_count'] == 0
+    assert len(state.calls) == 2
+    assert addition not in state.calls[0][1] and addition in state.calls[1][1]
 
 
 def test_non_decision_task_changes_and_api_key_rotation_reuse_cache(context):
