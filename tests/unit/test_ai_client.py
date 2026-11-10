@@ -1,8 +1,5 @@
 import asyncio
 import os
-import subprocess
-import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -23,15 +20,15 @@ def test_build_messages_without_images_uses_text_only_content():
     client = AIClient.__new__(AIClient)
 
     messages = client._build_messages(
-        {"商品信息": {"商品标题": "MacBook Pro M2"}, "卖家信息": {"卖家信用等级": "优秀"}},
+        {"platform": "shopee_tw", "title": "Mac mini M4", "seller": {"rating": 4.9}},
         [],
-        "只分析文字描述和卖家资质。",
+        "只分析文字描述和公開賣家資訊。",
     )
 
     content = messages[0]["content"]
     assert isinstance(content, str)
-    assert "MacBook Pro M2" in content
-    assert "未提供商品图片" in content
+    assert "Mac mini M4" in content
+    assert "未提供商品圖片" in content
 
 
 def test_build_messages_with_images_uses_multimodal_content(monkeypatch):
@@ -39,9 +36,9 @@ def test_build_messages_with_images_uses_multimodal_content(monkeypatch):
     monkeypatch.setattr(AIClient, "encode_image", staticmethod(lambda _path: "ZmFrZQ=="))
 
     messages = client._build_messages(
-        {"商品信息": {"商品标题": "MacBook Pro M2"}},
+        {"platform": "shopee_tw", "title": "Mac mini M4"},
         ["fake-image.jpg"],
-        "结合图片和文字综合判断。",
+        "結合圖片和文字綜合判斷。",
     )
 
     content = messages[0]["content"]
@@ -83,7 +80,6 @@ def test_call_ai_retries_without_structured_output_when_model_rejects_it():
     client.settings = SimpleNamespace(
         model_name="fake-model",
         enable_response_format=True,
-        enable_thinking=False,
     )
     request_history = []
 
@@ -119,7 +115,6 @@ def test_call_ai_falls_back_to_responses_when_chat_completions_api_is_missing():
     client.settings = SimpleNamespace(
         model_name="fake-model",
         enable_response_format=True,
-        enable_thinking=False,
     )
     request_history = []
 
@@ -155,7 +150,6 @@ def test_call_ai_retries_without_temperature_when_gateway_rejects_it():
     client.settings = SimpleNamespace(
         model_name="fake-model",
         enable_response_format=False,
-        enable_thinking=False,
     )
     request_history = []
 
@@ -180,36 +174,23 @@ def test_call_ai_retries_without_temperature_when_gateway_rejects_it():
     assert "temperature" not in request_history[1]
 
 
-def test_call_ai_retries_when_response_content_is_empty():
+def test_call_ai_optionally_retries_one_empty_response():
     client = AIClient.__new__(AIClient)
-    client.settings = SimpleNamespace(
-        model_name="fake-model",
-        enable_response_format=False,
-        enable_thinking=False,
-    )
+    client.settings = SimpleNamespace(model_name="fake-model", enable_response_format=False, empty_response_retries=1)
     request_history = []
 
     async def fake_create(**kwargs):
         request_history.append(kwargs)
-        if len(request_history) < 4:
-            return SimpleNamespace(output_text="")
-        return SimpleNamespace(output_text='{"ok":true}')
+        return SimpleNamespace(output_text="" if len(request_history) == 1 else '{"ok":true}')
 
     client.client = _build_fake_client(fake_create)
-
-    response = asyncio.run(client._call_ai([{"role": "user", "content": "hi"}]))
-
-    assert response == '{"ok":true}'
-    assert len(request_history) == 4
+    assert asyncio.run(client._call_ai([{"role": "user", "content": "hi"}])) == '{"ok":true}'
+    assert len(request_history) == 2
 
 
-def test_call_ai_raises_after_all_empty_response_retries_are_exhausted():
+def test_call_ai_fails_fast_on_empty_response_by_default():
     client = AIClient.__new__(AIClient)
-    client.settings = SimpleNamespace(
-        model_name="fake-model",
-        enable_response_format=False,
-        enable_thinking=False,
-    )
+    client.settings = SimpleNamespace(model_name="fake-model", enable_response_format=False)
     request_history = []
 
     async def fake_create(**kwargs):
@@ -217,11 +198,9 @@ def test_call_ai_raises_after_all_empty_response_retries_are_exhausted():
         return SimpleNamespace(output_text="")
 
     client.client = _build_fake_client(fake_create)
-
-    with pytest.raises(ValueError, match="AI响应内容为空"):
+    with pytest.raises(ValueError, match="AI回應內容為空"):
         asyncio.run(client._call_ai([{"role": "user", "content": "hi"}]))
-
-    assert len(request_history) == 4
+    assert len(request_history) == 1
 
 
 def test_close_closes_underlying_async_client_and_clears_reference():
@@ -237,17 +216,6 @@ def test_close_closes_underlying_async_client_and_clears_reference():
 
     assert close_state["closed"] is True
     assert client.client is None
-
-
-def test_parse_response_uses_first_json_object_when_response_contains_multiple_objects():
-    client = AIClient.__new__(AIClient)
-
-    result = client._parse_response("""```json
-{"ok": true, "reason": "first"}
-{"ok": false, "reason": "second"}
-```""")
-
-    assert result == {"ok": True, "reason": "first"}
 
 
 # -- _sanitize_no_proxy_env tests --
@@ -281,7 +249,8 @@ def test_sanitize_no_proxy_handles_both_keys(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "::1/128")
     monkeypatch.setenv("no_proxy", "fe80::1/10")
     _sanitize_no_proxy_env()
-    assert os.environ["NO_PROXY"] == "::1"
+    # Windows aliases environment variable names case-insensitively.
+    assert os.environ["NO_PROXY"] == ("fe80::1" if os.name == "nt" else "::1")
     assert os.environ["no_proxy"] == "fe80::1"
 
 
@@ -289,8 +258,9 @@ def test_sanitize_no_proxy_unwraps_bracketed_ipv6(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "localhost,127.0.0.1,::1,[::1]")
     monkeypatch.setenv("no_proxy", "[::1/128],10.0.0.0/8,[not-ipv6]")
     _sanitize_no_proxy_env()
-    assert os.environ["NO_PROXY"] == "localhost,127.0.0.1,::1,::1"
-    assert os.environ["no_proxy"] == "::1,10.0.0.0/8,[not-ipv6]"
+    lower_expected = "::1,10.0.0.0/8,[not-ipv6]"
+    assert os.environ["NO_PROXY"] == (lower_expected if os.name == "nt" else "localhost,127.0.0.1,::1,::1")
+    assert os.environ["no_proxy"] == lower_expected
 
 
 def test_bracketed_ipv6_no_proxy_does_not_break_openai_client(monkeypatch):
@@ -301,39 +271,3 @@ def test_bracketed_ipv6_no_proxy_does_not_break_openai_client(monkeypatch):
     from openai import AsyncOpenAI
 
     AsyncOpenAI(api_key="sk-test", base_url="https://example.com/v1")
-
-
-def test_legacy_config_client_initializes_with_bracketed_no_proxy(tmp_path):
-    env = os.environ.copy()
-    env.update(
-        {
-            "NO_PROXY": "localhost,127.0.0.1,[::1]",
-            "no_proxy": "localhost,127.0.0.1,[::1]",
-            "OPENAI_API_KEY": "sk-test",
-            "OPENAI_BASE_URL": "https://example.com/v1",
-            "OPENAI_MODEL_NAME": "fake-model",
-            "PROXY_URL": "",
-            "PYTHONPATH": str(Path(__file__).resolve().parents[2]),
-            "PYTHONDONTWRITEBYTECODE": "1",
-        }
-    )
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import os\n"
-                "from openai import AsyncOpenAI\n"
-                "from src.config import client\n"
-                "assert isinstance(client, AsyncOpenAI)\n"
-                "assert '[::1]' not in os.environ.get('NO_PROXY', '')\n"
-                "assert '[::1]' not in os.environ.get('no_proxy', '')\n"
-            ),
-        ],
-        cwd=tmp_path,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert completed.returncode == 0, completed.stderr

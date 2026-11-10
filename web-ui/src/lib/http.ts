@@ -26,6 +26,7 @@ export async function http(url: string, options: FetchOptions = {}) {
 
   const config: RequestInit = {
     ...options,
+    credentials: 'same-origin',
     headers,
   }
 
@@ -35,12 +36,14 @@ export async function http(url: string, options: FetchOptions = {}) {
     // Basic Auth failed or session expired
     logout()
     // Optional: Redirect to login handled by router or state change
-    throw new Error('Unauthorized')
+    throw new Error('登入已失效，請重新登入。')
   }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+    const detail = errorData.detail
+    const message = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((item: { msg?: string }) => item.msg || '欄位格式不正確').join('；') : `操作未完成（HTTP ${response.status}）`
+    throw new Error(message)
   }
 
   // Handle 204 No Content

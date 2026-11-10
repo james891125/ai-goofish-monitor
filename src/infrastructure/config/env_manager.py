@@ -1,9 +1,10 @@
 """
-环境变量管理器
-负责读取和更新 .env 文件，并在读取时回退到运行时环境变量
+環境變數管理器
+负责读取和更新 .env 檔案，并在读取時回退到執行時環境變數
 """
 import os
 import re
+import tempfile
 from typing import Dict, List, Optional
 from pathlib import Path
 
@@ -14,23 +15,23 @@ _PLAIN_ENV_VALUE_PATTERN = re.compile(r"^[A-Za-z0-9_./:-]+$")
 
 
 class EnvManager:
-    """环境变量管理器"""
+    """環境變數管理器"""
 
     def __init__(self, env_file: str = ".env"):
         self.env_file = Path(env_file)
         self._ensure_env_file_exists()
 
     def _ensure_env_file_exists(self):
-        """确保 .env 文件存在"""
+        """确保 .env 檔案存在"""
         if not self.env_file.exists():
             self.env_file.touch()
 
     def read_env(self) -> Dict[str, str]:
-        """读取所有环境变量"""
+        """读取所有環境變數"""
         if not self.env_file.exists():
             return {}
 
-        loaded = dotenv_values(self.env_file, encoding="utf-8")
+        loaded = dotenv_values(self.env_file, encoding="utf-8-sig", interpolate=False)
         return {
             key: value
             for key, value in loaded.items()
@@ -38,7 +39,7 @@ class EnvManager:
         }
 
     def get_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        """获取单个环境变量的值，优先读取 .env，缺失时再回退到运行时环境变量"""
+        """取得单個環境變數的值，优先读取 .env，缺失時再回退到執行時環境變數"""
         env_vars = self.read_env()
         if key in env_vars:
             return env_vars[key]
@@ -50,7 +51,7 @@ class EnvManager:
         return default
 
     def update_values(self, updates: Dict[str, str]) -> bool:
-        """批量更新环境变量"""
+        """批量更新環境變數"""
         return self.apply_changes(updates=updates)
 
     def apply_changes(
@@ -58,7 +59,7 @@ class EnvManager:
         updates: Dict[str, str],
         deletions: List[str] | None = None,
     ) -> bool:
-        """批量更新并删除环境变量"""
+        """批量更新并刪除環境變數"""
         try:
             existing_vars = self.read_env()
             existing_vars.update(updates)
@@ -66,34 +67,44 @@ class EnvManager:
                 existing_vars.pop(key, None)
             return self._write_env(existing_vars)
         except Exception as e:
-            print(f"更新环境变量失败: {e}")
+            print(f"更新環境變數失敗: {e}")
             return False
 
     def set_value(self, key: str, value: str) -> bool:
-        """设置单个环境变量"""
+        """設定单個環境變數"""
         return self.update_values({key: value})
 
     def delete_keys(self, keys: List[str]) -> bool:
-        """删除指定的环境变量"""
+        """刪除指定的環境變數"""
         try:
             existing_vars = self.read_env()
             for key in keys:
                 existing_vars.pop(key, None)
             return self._write_env(existing_vars)
         except Exception as e:
-            print(f"删除环境变量失败: {e}")
+            print(f"刪除環境變數失敗: {e}")
             return False
 
     def _write_env(self, env_vars: Dict[str, str]) -> bool:
-        """写入环境变量到文件"""
+        """Validate fully, then atomically replace the resolved file (preserve symlinks)."""
+        temporary = None
         try:
-            with open(self.env_file, 'w', encoding='utf-8') as f:
-                for key, value in env_vars.items():
-                    f.write(f"{key}={self._serialize_value(value)}\n")
+            content = "".join(f"{key}={self._serialize_value(value)}\n" for key, value in env_vars.items())
+            encoded = content.encode("utf-8", errors="strict")
+            target = self.env_file.resolve()
+            with tempfile.NamedTemporaryFile(mode="wb", dir=target.parent, prefix=".settings-", delete=False) as handle:
+                temporary = Path(handle.name)
+                handle.write(encoded)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, target)
             return True
-        except Exception as e:
-            print(f"写入 .env 文件失败: {e}")
+        except (OSError, ValueError, UnicodeError):
+            print("設定儲存失敗；原設定檔保留，未輸出機密內容。")
             return False
+        finally:
+            if temporary is not None and temporary.exists():
+                temporary.unlink()
 
     def _serialize_value(self, value: str) -> str:
         text = str(value)
@@ -105,5 +116,5 @@ class EnvManager:
         return f'"{escaped}"'
 
 
-# 全局实例
+# 全局實例
 env_manager = EnvManager()

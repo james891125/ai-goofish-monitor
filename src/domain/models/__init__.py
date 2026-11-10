@@ -1,3 +1,3 @@
-from .task import Task, TaskCreate, TaskUpdate, TaskStatus
+from .shopee import Product, Seller, ShopeeTask
 
-__all__ = ["Task", "TaskCreate", "TaskUpdate", "TaskStatus"]
+__all__ = ['Product', 'Seller', 'ShopeeTask']

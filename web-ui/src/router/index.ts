@@ -1,101 +1,22 @@
-import { watch } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
-import MainLayout from '@/layouts/MainLayout.vue'
 import { useAuth } from '@/composables/useAuth'
-import { i18n, t } from '@/i18n'
-
-const routes = [
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/LoginView.vue'),
-    meta: { titleKey: 'routes.login' },
-  },
-  {
-    path: '/',
-    component: MainLayout,
-    redirect: '/dashboard',
-    children: [
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/DashboardView.vue'),
-        meta: { titleKey: 'routes.dashboard', requiresAuth: true },
-      },
-      {
-        path: 'tasks',
-        name: 'Tasks',
-        component: () => import('@/views/TasksView.vue'),
-        meta: { titleKey: 'routes.tasks', requiresAuth: true },
-      },
-      {
-        path: 'accounts',
-        name: 'Accounts',
-        component: () => import('@/views/AccountsView.vue'),
-        meta: { titleKey: 'routes.accounts', requiresAuth: true },
-      },
-      {
-        path: 'results',
-        name: 'Results',
-        component: () => import('@/views/ResultsView.vue'),
-        meta: { titleKey: 'routes.results', requiresAuth: true },
-      },
-      {
-        path: 'logs',
-        name: 'Logs',
-        component: () => import('@/views/LogsView.vue'),
-        meta: { titleKey: 'routes.logs', requiresAuth: true },
-      },
-      {
-        path: 'settings',
-        name: 'Settings',
-        component: () => import('@/views/SettingsView.vue'),
-        meta: { titleKey: 'routes.settings', requiresAuth: true },
-      },
-    ],
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    redirect: '/',
-  },
-]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
+  routes: [
+    { path: '/login', name: 'Login', component: () => import('@/views/LoginView.vue') },
+    { path: '/', redirect: '/tasks' },
+    ...['tasks', 'results', 'sources', 'history', 'settings'].map(section => ({ path: `/${section}`, name: section, component: () => import('@/views/ShopeeView.vue'), meta: { requiresAuth: true } })),
+    { path: '/:pathMatch(.*)*', redirect: '/tasks' },
+  ],
 })
-
-function updateDocumentTitle() {
-  const currentRoute = router.currentRoute.value
-  const titleKey = typeof currentRoute.meta.titleKey === 'string'
-    ? currentRoute.meta.titleKey
-    : null
-  const appName = t('app.name')
-  document.title = titleKey ? `${t(titleKey)} - ${appName}` : appName
-}
-
-router.beforeEach((to, _from, next) => {
+router.beforeEach(to => {
   const { isAuthenticated } = useAuth()
-
-  if (to.meta.requiresAuth && !isAuthenticated.value) {
-    next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (to.name === 'Login' && isAuthenticated.value) {
-    next({ name: 'Dashboard' })
-  } else {
-    next()
-  }
+  if (to.meta.requiresAuth && !isAuthenticated.value) return { name: 'Login', query: { redirect: to.fullPath } }
+  if (to.name === 'Login' && isAuthenticated.value) return '/tasks'
 })
-
-router.afterEach(() => {
-  updateDocumentTitle()
+router.afterEach(to => {
+  const titles: Record<string, string> = { tasks: '監控任務', results: '商品與推薦', sources: '資料來源', history: '執行紀錄', settings: 'AI 與通知設定', Login: '登入' }
+  document.title = `${titles[String(to.name)] ?? '監控中心'} · 蝦皮臺灣 AI 監控`
 })
-
-watch(
-  () => i18n.global.locale.value,
-  () => {
-    updateDocumentTitle()
-  },
-)
-
 export default router
