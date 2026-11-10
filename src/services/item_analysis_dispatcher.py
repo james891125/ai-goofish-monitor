@@ -75,9 +75,21 @@ class ItemAnalysisDispatcher:
         item_data = record.get("商品資訊", {}) or {}
         record["賣家資訊"] = await self._load_seller_info(job)
         record["ai_analysis"] = await self._build_analysis_result(job, record)
+        self._log_decision(item_data, record["ai_analysis"])
         if await self._saver(record, job.keyword):
             self.completed_count += 1
         await self._notify_if_recommended(item_data, record["ai_analysis"])
+
+    @staticmethod
+    def _log_decision(item_data: dict, analysis: dict) -> None:
+        """在日誌印出每件商品的判斷結果，方便不開網頁就能看懂推薦依據。"""
+        verdict = "推薦" if analysis.get("is_recommended") else "不推薦"
+        score = analysis.get("value_score")
+        score_text = f"{score}分" if score is not None else "無分數"
+        source = {"rule": "規則", "keyword": "關鍵字"}.get(analysis.get("analysis_source"), "AI")
+        title = str(item_data.get("商品標題") or "")[:28]
+        price = item_data.get("目前售價", "")
+        print(f"   [判斷] {verdict}（{source}・{score_text}）{price} {title}｜{analysis.get('reason', '')}")
 
     async def _load_seller_info(self, job: ItemAnalysisJob) -> dict:
         seller_info = {}
