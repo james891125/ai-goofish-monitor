@@ -1,12 +1,12 @@
 """
-用規則從商品標題（與描述）抽出：狀態、記憶體、儲存容量、保固、購買日期。
+用規則從商品標題（與描述）抽出：狀態、規格、記憶體、儲存容量、保固。
 
 全部是純函式，不需要 AI 也不需要網路。抓不到就回傳空字串，絕不猜測。
 容量的判斷是啟發式：同時出現兩個容量時，較小的當記憶體、較大的當儲存空間。
 """
 import re
 
-FIELDS = ("狀態", "記憶體", "儲存容量", "保固", "購買日期")
+FIELDS = ("狀態", "規格", "記憶體", "儲存容量", "保固")
 CONDITIONS = ("全新", "近全新", "二手", "福利品", "展示機", "故障/零件機", "預購")
 
 _BROKEN = ("故障", "零件機", "無法開機", "不能開機", "殺肉", "拆零件", "維修用")
@@ -174,28 +174,66 @@ def extract_warranty(text: str) -> str:
     return ""
 
 
-_PURCHASE_KEYS = (
-    "購買日期", "購入日期", "購買時間", "購入時間", "購買於", "購於", "購入於", "購入", "購買",
-    "發票日期", "發票日", "出廠日期", "生產日期", "啟用日期", "入手",
+_CHIP = re.compile(
+    r"(?<![A-Za-z0-9])(M[1-9]\s?(?:Pro|Max|Ultra)?|A1[0-9]\s?(?:Pro|Bionic)?|"
+    r"i[3579][- ]?\d{4,5}[A-Z]{0,2}|Ultra\s?[579]|R[3579][- ]?\d{4}[A-Z0-9]{0,3}|"
+    r"(?:RTX|GTX|RX)\s?\d{3,4}\s?(?:Ti|XT|Super)?(?:\s?Super)?)(?![A-Za-z0-9])",
+    re.IGNORECASE,
 )
-_PURCHASE_BEFORE = re.compile(rf"(?:{'|'.join(_PURCHASE_KEYS)})\s*[:：]?\s*{_DATE}")
-_PURCHASE_AFTER = re.compile(rf"{_DATE}\s*日?\s*(?:購入|購買|購於|入手|買的|發票)")
+_MM = re.compile(r"(?<!\d)(\d{2})\s*(?:mm|毫米)(?![A-Za-z])", re.IGNORECASE)
+_INCH = re.compile(r"(?<![\d.])(\d{1,2}(?:\.\d)?)\s*(?:吋|英吋|inch|\")", re.IGNORECASE)
+_CELLULAR = ("lte", "行動網路", "cellular", "+行動", "插卡", "esim")
+_WATCH_MM = {38, 40, 41, 42, 44, 45, 46, 49}
 
 
-def extract_purchase_date(text: str) -> str:
-    """只有文字明確寫出購買／發票日期才回傳；上架日期不等於購買日期。"""
-    match = _PURCHASE_BEFORE.search(text) or _PURCHASE_AFTER.search(text)
-    if not match:
-        return ""
-    return _fmt_date(*match.groups()[:3])
+def _tidy_chip(raw: str) -> str:
+    text = re.sub(r"\s+", " ", raw.strip())
+    text = re.sub(r"(?i)^(m\d)\s?(pro|max|ultra)$", lambda m: f"{m.group(1).upper()} {m.group(2).capitalize()}", text)
+    text = re.sub(r"(?i)^(rtx|gtx|rx)\s?(\d{3,4})\s?(ti|xt|super)?\s?(super)?$",
+                  lambda m: " ".join(x for x in (m.group(1).upper(), m.group(2),
+                                                   (m.group(3) or "").replace("ti", "Ti").replace("TI", "Ti"),
+                                                   (m.group(4) or "").capitalize()) if x), text)
+    return text[0].upper() + text[1:] if re.match(r"(?i)^m\d$", text) else text
+
+
+def extract_spec(text: str) -> str:
+    """抽出通用規格：晶片／型號、尺寸（mm、吋）、GPS 或行動網路版。沒有就回傳空字串。"""
+    parts: list[str] = []
+    chips = []
+    for match in _CHIP.finditer(text):
+        chip = _tidy_chip(match.group(1))
+        if chip.lower() not in [c.lower() for c in chips]:
+            chips.append(chip)
+    # 標題常為了曝光堆疊多個型號（M6 M5Pro M4…），超過兩個就不可信
+    if 1 <= len(chips) <= 2:
+        # 「M4」與「M4 Pro」同時出現時只留較完整的那個
+        chips = [c for c in chips if not any(o != c and o.lower().startswith(c.lower() + " ") for o in chips)]
+        parts.extend(chips)
+    found = {int(m.group(1)) for m in _MM.finditer(text)}
+    # 「42/46mm」「42｜46mm」這種寫法，前面那個數字後面沒有 mm
+    for m in re.finditer(r"(?<!\d)(\d{2})\s*[/／｜|、]\s*(\d{2})\s*(?:mm|毫米)", text, re.IGNORECASE):
+        found.add(int(m.group(1)))
+    sizes = sorted(s for s in found if s in _WATCH_MM)
+    if 1 <= len(sizes) <= 2:
+        parts.append("/".join(f"{s}mm" for s in sizes))
+    inches = sorted({m.group(1) for m in _INCH.finditer(text) if 5 <= float(m.group(1)) <= 40}, key=float)
+    if len(inches) == 1:
+        parts.append(f"{inches[0]}吋")
+    lowered = text.lower()
+    if any(word in lowered for word in _CELLULAR):
+        parts.append("LTE")
+    elif re.search(r"(?<![a-z])gps(?![a-z])", lowered):
+        parts.append("GPS")
+    return "、".join(parts)
 
 
 def extract_fields(text: str, *, from_description: bool = False) -> dict:
     memory, storage = extract_capacity(text)
     return {
         "狀態": extract_condition(text, from_description=from_description),
+        # 規格只相信標題：描述常列出整個系列的所有尺寸與型號
+        "規格": "" if from_description else extract_spec(text),
         "記憶體": memory,
         "儲存容量": storage,
         "保固": extract_warranty(text),
-        "購買日期": extract_purchase_date(text),
     }

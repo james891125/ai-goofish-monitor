@@ -8,21 +8,33 @@ import requests
 from .extract import FIELDS
 
 BASE_COLUMNS = [
-    "搜尋關鍵字", "品名", "狀態", "記憶體", "儲存容量", "保固", "購買日期",
+    "搜尋關鍵字", "品名", "狀態", "規格", "記憶體", "儲存容量", "保固",
     "價格", "多規格最高價", "出貨地", "賣場", "已售", "上架日期", "商品連結", "資料來源",
 ]
 AI_PREFIX = "AI_"
 
 
-def columns_for(mode: str) -> list[str]:
+# 這些欄位不是每種商品都有（例如手錶沒有記憶體）；整欄都空白時就不輸出
+OPTIONAL_COLUMNS = set(FIELDS) | {"多規格最高價", "差異欄位"} | {AI_PREFIX + f for f in FIELDS}
+
+
+def columns_for(mode: str, rows: list[dict] | None = None) -> list[str]:
+    """回傳要輸出的欄位。有傳 rows 時，會拿掉整欄都空白的選用欄位。"""
+    columns = list(BASE_COLUMNS)
     if mode == "compare":
-        return BASE_COLUMNS + [AI_PREFIX + f for f in FIELDS] + ["差異欄位"]
-    return BASE_COLUMNS
+        columns += [AI_PREFIX + f for f in FIELDS] + ["差異欄位"]
+    if rows is None:
+        return columns
+
+    def has_value(column: str) -> bool:
+        return any(str(row.get(column, "") or "").strip() for row in rows)
+
+    return [c for c in columns if c not in OPTIONAL_COLUMNS or has_value(c)]
 
 
 def build_csv(rows: list[dict], mode: str = "off") -> bytes:
     """回傳帶 UTF-8 BOM 的 CSV，Excel 直接雙擊就能正確顯示中文。"""
-    columns = columns_for(mode)
+    columns = columns_for(mode, rows)
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=columns, extrasaction="ignore")
     writer.writeheader()

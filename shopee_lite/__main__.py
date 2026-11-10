@@ -17,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     run = sub.add_parser("run", help="搜尋關鍵字並輸出 CSV")
     run.add_argument("keywords", nargs="+", help="一個或多個關鍵字")
     run.add_argument("--pages", type=int, default=3, help=f"每個關鍵字看幾頁（1–{MAX_PAGES}，預設 3；一頁約 60 件）")
-    run.add_argument("--min-price", default="", help="最低價")
+    run.add_argument("--min-price", default="", help="最低價（搜尋時套用，抓回來後也會再檢查一次）")
     run.add_argument("--max-price", default="", help="最高價")
     run.add_argument("--latest", action="store_true", help="依最新上架排序")
     run.add_argument("--region", default="", help="只留出貨地包含此文字的商品，例如 台北市")
@@ -32,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--no-title-match", action="store_true", help="不要排除標題沒有包含關鍵字的商品")
     run.add_argument("--keep-accessories", action="store_true", help="不要排除保護貼、錶帶、機殼等配件")
+    run.add_argument("--exclude", default="", help="額外要排除的詞，逗號或空白分隔，例如 \"殼,膜,線\"")
     run.add_argument("--webhook", action="store_true", help="完成後把 CSV 傳到 WEBHOOK_URL")
     run.add_argument("--headless", action="store_true", help="隱藏瀏覽器視窗（遇到驗證時無法手動處理）")
 
@@ -63,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
         ai=args.ai,
         title_match=not args.no_title_match,
         exclude_accessories=not args.keep_accessories,
+        extra_exclude=[args.exclude],
     )
     settings = service.load_settings()
     if args.headless:

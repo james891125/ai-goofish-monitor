@@ -68,13 +68,13 @@ def test_auto_mode_only_opens_pages_whose_title_lacks_info():
     assert result.rows[0]["資料來源"] == "標題"
 
 
-def test_all_mode_opens_every_page_and_reads_warranty_and_purchase_date():
+def test_all_mode_opens_every_page_and_reads_warranty():
     browser = FakeBrowser(detail_payload=detail_payload())
     result = run(RunOptions(["macbook"], pages=1, detail="all"), browser)
 
     assert len(browser.detail_urls) == 2
     first = result.rows[0]
-    assert first["購買日期"] == "2025/03" and first["保固"] == "保固至 2027/08"
+    assert first["保固"] == "保固至 2027/08" and "購買日期" not in first
 
 
 def test_risk_block_on_detail_keeps_title_data_and_stops_detail_phase():
@@ -120,8 +120,8 @@ class FakeAI(AIClient):
 
 def test_ai_on_mode_fills_only_blanks_and_compare_mode_shows_differences():
     replies = {
-        0: {"狀態": "全新", "記憶體": "8GB", "儲存容量": "256GB", "保固": "保固 1 年", "購買日期": ""},
-        1: {"狀態": "二手", "記憶體": "16GB", "儲存容量": "512GB", "保固": "", "購買日期": ""},
+        0: {"狀態": "全新", "記憶體": "8GB", "儲存容量": "256GB", "保固": "保固 1 年"},
+        1: {"狀態": "二手", "記憶體": "16GB", "儲存容量": "512GB", "保固": ""},
     }
     ai = FakeAI(replies)
     on = run(RunOptions(["macbook"], pages=1, detail="off", ai="on", title_match=False), FakeBrowser(), ai)
@@ -145,7 +145,7 @@ def test_ai_without_key_is_skipped_with_a_note():
 
 
 def test_parse_ai_reply_tolerates_code_fences_and_invalid_values():
-    reply = '```json\n{"items":[{"id":0,"狀態":"很新","記憶體":"16GB","儲存容量":null,"保固":"保固中","購買日期":""}]}\n```'
+    reply = '```json\n{"items":[{"id":0,"狀態":"很新","記憶體":"16GB","儲存容量":null,"保固":"保固中"}]}\n```'
     parsed = parse_ai_reply(reply)
     assert parsed[0]["狀態"] == "" and parsed[0]["記憶體"] == "16GB" and parsed[0]["儲存容量"] == ""
     with pytest.raises(ValueError):
@@ -179,3 +179,26 @@ def test_description_boilerplate_does_not_mark_item_as_broken_or_add_fake_sizes(
     got = extract_fields(desc, from_description=True)
     assert got["狀態"] == "" and got["記憶體"] == "" and got["儲存容量"] == ""
     assert got["保固"] == "保固 1 年"
+
+
+def test_local_price_range_and_extra_exclude_words():
+    in_range = run(RunOptions(["macbook"], pages=1, detail="off", min_price="20000", max_price="40000"), FakeBrowser())
+    assert [r["價格"] for r in in_range.rows] == [30000]  # 18500 低於下限被排除
+    custom = run(RunOptions(["macbook"], pages=1, detail="off", extra_exclude=["多規格, 不存在的詞"]), FakeBrowser())
+    assert [r["品名"][:11] for r in custom.rows] == ["MacBook Air"]
+
+
+def test_columns_that_are_empty_for_every_row_are_left_out_of_the_csv():
+    rows = [
+        {"搜尋關鍵字": "watch", "品名": "Apple Watch S10 46mm GPS", "狀態": "", "規格": "46mm、GPS",
+         "記憶體": "", "儲存容量": "", "保固": "", "價格": 7500, "多規格最高價": ""},
+        {"搜尋關鍵字": "watch", "品名": "Apple Watch S10 42mm", "狀態": "二手", "規格": "42mm",
+         "記憶體": "", "儲存容量": "", "保固": "", "價格": 6800, "多規格最高價": ""},
+    ]
+    header = exporter.build_csv(rows).decode("utf-8-sig").splitlines()[0].split(",")
+
+    assert "規格" in header and "狀態" in header          # 有任何一列有值就保留
+    assert "記憶體" not in header and "儲存容量" not in header and "保固" not in header
+    assert "多規格最高價" not in header
+    assert {"品名", "價格", "商品連結", "出貨地"} <= set(header)   # 基本欄位永遠保留
+    assert "購買日期" not in header

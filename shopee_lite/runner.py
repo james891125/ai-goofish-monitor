@@ -23,6 +23,31 @@ def is_accessory(title: str) -> bool:
     lowered = str(title).lower()
     return any(word in lowered for word in ACCESSORY_WORDS)
 
+
+def parse_words(text) -> list[str]:
+    """把「殼, 膜 線」這種輸入拆成詞清單（逗號、頓號、空白、換行都可分隔）。"""
+    if isinstance(text, (list, tuple)):
+        text = " ".join(str(t) for t in text)
+    return [w for w in re.split(r"[,，、\s]+", str(text or "")) if w]
+
+
+def _to_number(value) -> Optional[float]:
+    try:
+        return float(str(value).replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def price_in_range(item: dict, min_price, max_price) -> bool:
+    """本機再檢查一次價格：蝦皮的價格篩選對多規格商品不精確，配件常靠最低價規格混進來。"""
+    low, _ = parse_price_range(item.get("目前售價"))
+    if low is None:
+        return True
+    floor, ceiling = _to_number(min_price), _to_number(max_price)
+    if floor is not None and low < floor:
+        return False
+    return not (ceiling is not None and low > ceiling)
+
 AI_MODES = ("off", "on", "compare")
 MAX_PAGES = 10
 _NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
@@ -41,6 +66,7 @@ class RunOptions:
     ai: str = "off"
     title_match: bool = True
     exclude_accessories: bool = True
+    extra_exclude: list[str] = field(default_factory=list)
     page_pause: tuple[float, float] = (5, 10)
     detail_pause: tuple[float, float] = (3, 6)
 
@@ -123,10 +149,13 @@ def values_agree(name: str, rule_value: str, ai_value: str) -> bool:
         return True
     if not a or not b:
         return False
-    if name in ("保固", "購買日期"):
+    if name == "保固":
         if a in b or b in a:
             return True
         return re.findall(r"\d+", a) == re.findall(r"\d+", b)
+    if name == "規格":
+        split = lambda v: {t for t in re.split(r"[、,，/／\s]+", v) if t}  # noqa: E731
+        return split(a) == split(b)
     return False
 
 
@@ -184,6 +213,7 @@ async def run_search(
     stop = should_stop or (lambda: False)
     rows: list[dict] = []
     seen: set[str] = set()
+    extra_words = [w.lower() for w in parse_words(options.extra_exclude)]
 
     for keyword in options.keywords:
         for page_num in range(1, options.pages + 1):
@@ -210,6 +240,12 @@ async def run_search(
                 items = [i for i in items if shopee.title_matches_keyword(i["商品標題"], keyword)]
             if options.exclude_accessories:
                 items = [i for i in items if not is_accessory(i["商品標題"])]
+            if extra_words:
+                items = [
+                    i for i in items
+                    if not any(w in i["商品標題"].lower() for w in extra_words)
+                ]
+            items = [i for i in items if price_in_range(i, options.min_price, options.max_price)]
             added = 0
             for item in items:
                 item_id = str(item.get("商品ID"))

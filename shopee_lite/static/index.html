@@ -70,8 +70,8 @@
     <textarea id="keywords" rows="3" placeholder="mac mini m4"></textarea>
     <div class="grid" style="margin-top:12px">
       <div><label for="pages">每個關鍵字看幾頁（一頁約 60 件）</label><input id="pages" type="number" min="1" max="10" value="3"></div>
-      <div><label for="minPrice">最低價</label><input id="minPrice" type="number" min="0" placeholder="不限"></div>
-      <div><label for="maxPrice">最高價</label><input id="maxPrice" type="number" min="0" placeholder="不限"></div>
+      <div><label for="minPrice">價格範圍：最低</label><input id="minPrice" type="number" min="0" placeholder="不限"></div>
+      <div><label for="maxPrice">價格範圍：最高</label><input id="maxPrice" type="number" min="0" placeholder="不限"></div>
       <div><label for="region">出貨地包含（選填）</label><input id="region" type="text" placeholder="例如 台北市"></div>
       <div><label for="detail">補抓商品頁（取得描述）</label>
         <select id="detail">
@@ -92,6 +92,11 @@
       <label class="check"><input id="titleMatch" type="checkbox" checked> 排除標題沒包含關鍵字的商品</label>
       <label class="check"><input id="noAccessory" type="checkbox" checked> 排除配件（保護貼、錶帶、機殼…）</label>
     </div>
+    <div style="margin-top:12px">
+      <label for="extraExclude">額外排除的詞（標題含任一個就不列入，用逗號或空白分隔）</label>
+      <input id="extraExclude" type="text" placeholder="例如 殼, 膜, 線, 教育價">
+    </div>
+    <p class="hint">填價格範圍是濾掉配件最有效的方法，例如 Mac mini 最低填 15000。</p>
     <div class="row">
       <button id="run" class="primary">開始搜尋</button>
       <button id="stop" disabled>停止</button>
@@ -218,7 +223,7 @@ $('run').onclick = async () => {
       min_price: $('minPrice').value, max_price: $('maxPrice').value, region: $('region').value,
       detail: $('detail').value, ai: $('ai').value, latest: $('latest').checked,
       free_shipping: $('freeShip').checked, title_match: $('titleMatch').checked,
-      exclude_accessories: $('noAccessory').checked,
+      exclude_accessories: $('noAccessory').checked, extra_exclude: $('extraExclude').value,
     });
     startPolling();
   } catch (e) { $('runState').textContent = e.message; $('runState').className = 'hint bad'; }

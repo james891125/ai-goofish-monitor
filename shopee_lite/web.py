@@ -76,7 +76,7 @@ class Job:
             )
             with self.lock:
                 self.csv_path = path
-                self.columns = columns_for(result.mode)
+                self.columns = columns_for(result.mode, result.rows)
                 self.rows = [
                     {c: row.get(c, "") for c in self.columns} for row in result.rows[:PREVIEW_ROWS]
                 ]
@@ -125,6 +125,7 @@ def parse_options(data: dict) -> RunOptions:
         ai=ai,
         title_match=bool(data.get("title_match", True)),
         exclude_accessories=bool(data.get("exclude_accessories", True)),
+        extra_exclude=[str(data.get("extra_exclude") or "")],
     )
     options.validate()
     return options
